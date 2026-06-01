@@ -9,6 +9,11 @@
   --accent: #7aa2f7;
   --hover: rgba(255, 255, 255, 0.05);
   --selection: rgba(122, 162, 247, 0.25);
+  /* White writing sheet (vintage typewriter): warm paper + dark ink. */
+  --paper: #f4f1e8;
+  --ink: #23211c;
+  --paper-muted: #9c968a;
+  --paper-selection: rgba(43, 41, 34, 0.14);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -207,12 +212,42 @@ body {
   color: var(--muted);
 }
 
-/* Per-mode editor typography: screenplay & stage use a monospaced face
-   (a real convention), keyed off the data attribute the editor sets. */
-.wb-editor[data-writing-mode='screenplay'],
-.wb-editor[data-writing-mode='stage_script'] {
-  font-family: "Courier New", "Courier Prime", ui-monospace, monospace;
-  font-size: 16px;
+.wb-statusline-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sp-element {
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Minimal Screenplay element formatting (scoped to Screenplay mode). The
+   element type is the paragraph's `data-sp` attribute; Tab cycles it. */
+.wb-editor[data-writing-mode='screenplay'] p[data-sp='scene_heading'] {
+  margin-top: 1.5em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.wb-editor[data-writing-mode='screenplay'] p[data-sp='character'] {
+  margin: 1.2em 0 0 20ch;
+  text-transform: uppercase;
+}
+.wb-editor[data-writing-mode='screenplay'] p[data-sp='dialogue'] {
+  margin: 0 12ch 0 10ch;
+}
+.wb-editor[data-writing-mode='screenplay'] p[data-sp='parenthetical'] {
+  margin: 0 16ch;
+  font-style: italic;
+}
+.wb-editor[data-writing-mode='screenplay'] p[data-sp='transition'] {
+  margin-top: 1em;
+  text-align: right;
+  text-transform: uppercase;
 }
 
 .wb-surface {
@@ -233,15 +268,24 @@ body {
   color: var(--error);
 }
 
-/* The editable writing surface (a clean, blank-sheet feel). */
+/* The editable writing surface: a warm paper sheet on the dark app shell. */
 .wb-editor {
-  width: min(42rem, 100%);
+  width: min(46rem, 100%);
+  min-height: 60vh;
+  padding: 56px clamp(28px, 7vw, 72px);
+  background: var(--paper);
+  color: var(--ink);
+  caret-color: var(--ink);
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 44px rgba(0, 0, 0, 0.38);
   outline: none;
-  color: var(--text);
-  caret-color: var(--accent);
-  font-family: "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif;
-  font-size: 19px;
-  line-height: 1.75;
+  font-family: "Courier Prime", "Courier New", "Courier", ui-monospace, monospace;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.wb-editor ::selection {
+  background: var(--paper-selection);
 }
 
 .wb-editor p {
@@ -273,8 +317,8 @@ body {
   content: attr(data-placeholder);
   float: left;
   height: 0;
-  color: var(--muted);
-  opacity: 0.6;
+  color: var(--paper-muted);
+  opacity: 0.8;
   pointer-events: none;
 }
 

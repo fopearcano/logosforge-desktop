@@ -183,6 +183,34 @@ backend isn't running it tells you how to start it.
 
 ---
 
+## Focused regression tests
+
+### Persistence test
+1. `npm run dev`; wait for **Backend: Connected**.
+2. Type some text; wait for **Saved** in the status line.
+3. Fully quit Electron, then reopen (`npm run dev`, or `npx electron .`).
+4. ✅ The text is still there.
+5. *(Backend restart)* Stop and restart the backend, reload the app — the text
+   persists. Saved content lives at `~/.logosforge/whiteboard.json` (override the
+   directory with `LOGOSFORGE_DATA_DIR`).
+
+### Screenplay test
+1. Set the **Mode** selector to **Screenplay**. The status line shows the current
+   element (e.g. *Action*); the sheet uses a typewriter monospace face.
+2. Type a line, then press **Tab** — the element cycles (Scene Heading → Action →
+   Character → Dialogue → Parenthetical → Transition) and the formatting changes
+   (uppercase / indents / right-aligned transition). **Shift+Tab** cycles back.
+3. ✅ Tab never moves focus out of the editor; normal typing still works.
+4. Element types are saved with the document (persist across restart).
+
+### Theme test
+1. ✅ The editor is a **white / warm paper sheet** with a subtle shadow on the
+   dark app shell.
+2. ✅ Text is **dark charcoal** in a **typewriter monospace** font.
+3. The surrounding chrome (title bar, panels, status bar) stays dark.
+
+---
+
 ## Known limitations
 
 - **AI is a placeholder.** `POST /api/logos/inline` returns offline, deterministic
@@ -190,8 +218,9 @@ backend isn't running it tells you how to start it.
   PSYKE search. No model is called yet.
 - **PSYKE is sample data.** Search runs over a few placeholder entries; there is
   no entry creation or persistence yet.
-- **Persistence is in-memory.** The backend holds a single document in memory; it
-  resets when the backend restarts. (Per-project SQLite is a follow-up.)
+- **Persistence is a single JSON file** at `~/.logosforge/whiteboard.json`
+  (override the dir with `LOGOSFORGE_DATA_DIR`); it survives backend/Electron
+  restarts. Multi-document / per-project storage is a follow-up.
 - **Editor is plain-text per block** — paragraphs + headings only; no inline
   marks/lists yet (so what you see is exactly what is saved).
 - **Packaging is shell-only.** `npm run pack` packages the Electron shell; the

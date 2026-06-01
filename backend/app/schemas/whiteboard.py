@@ -18,6 +18,9 @@ class WhiteboardBlock(BaseModel):
     type: str = "paragraph"
     text: str = ""
     level: Optional[int] = None
+    # Optional screenplay element type (Scene Heading / Action / Character /
+    # Dialogue / Parenthetical / Transition) for paragraphs in Screenplay mode.
+    sp: Optional[str] = None
 
 
 class WhiteboardDocument(BaseModel):

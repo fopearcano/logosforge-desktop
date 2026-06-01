@@ -1,12 +1,20 @@
-"""Shared pytest fixtures."""
+"""Shared fixtures."""
 
 from __future__ import annotations
 
-import pytest
-from fastapi.testclient import TestClient
+import os
+import tempfile
 
-from app.main import app
-from app.services.whiteboard_service import whiteboard_service
+# Isolate persisted data to a throwaway temp dir BEFORE importing the app, since
+# settings (and the whiteboard store path) are resolved at import time. This
+# keeps tests from touching the real ~/.logosforge/whiteboard.json.
+os.environ["LOGOSFORGE_DATA_DIR"] = tempfile.mkdtemp(prefix="logosforge-test-")
+
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+from app.main import app  # noqa: E402
+from app.services.whiteboard_service import whiteboard_service  # noqa: E402
 
 
 @pytest.fixture()
@@ -16,7 +24,7 @@ def client() -> TestClient:
 
 @pytest.fixture(autouse=True)
 def _reset_state():
-    """Keep the in-memory document isolated between tests."""
+    """Reset the document (and remove the persisted file) between tests."""
     whiteboard_service.reset()
     yield
     whiteboard_service.reset()

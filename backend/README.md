@@ -80,9 +80,11 @@ Covers `/health`, `/api/version`, `/api/whiteboard`, `/api/writing-modes`,
 ## Notes & scope
 
 - **In scope:** the seven foundation capabilities above.
-- **Stubs / boundaries:** the whiteboard store is in-memory (per-project SQLite
-  arrives later); PSYKE search runs over an empty in-memory store; Logos inline
-  returns a deterministic placeholder (no network/LLM).
+- **Persistence:** the single whiteboard document is saved to a JSON file at
+  `~/.logosforge/whiteboard.json` (override the dir with `LOGOSFORGE_DATA_DIR`).
+- **Stubs / boundaries:** PSYKE search runs over a few placeholder sample
+  entries; Logos inline returns deterministic offline placeholders (the
+  `connect` action does a real PSYKE search). No LLM is called yet.
 - **Out of scope (Pro):** dashboard, project hub, timeline, graph, analytics,
   Pro dockable workspace, advanced HUD visuals.
 - **No frontend yet** — backend only.

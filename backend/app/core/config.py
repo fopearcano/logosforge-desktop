@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,9 @@ class Settings:
     port: int = 8777
     # Local-first: only accept browser/Electron origins on loopback.
     cors_origin_regex: str = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+    # Where persisted data (the whiteboard document) lives. Override with
+    # LOGOSFORGE_DATA_DIR; defaults to ~/.logosforge.
+    data_dir: str = str(Path.home() / ".logosforge")
 
 
 def _load() -> Settings:
@@ -30,6 +34,7 @@ def _load() -> Settings:
         version=os.getenv("LOGOSFORGE_VERSION", "0.1.0"),
         host=os.getenv("LOGOSFORGE_HOST", "127.0.0.1"),
         port=int(os.getenv("LOGOSFORGE_PORT", "8777")),
+        data_dir=os.getenv("LOGOSFORGE_DATA_DIR", str(Path.home() / ".logosforge")),
     )
 
 

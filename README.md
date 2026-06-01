@@ -90,8 +90,9 @@ cd desktop && npm run typecheck                 # frontend type safety
 - **AI is a placeholder.** Logos returns offline, deterministic per-action text
   (no real model yet); PSYKE serves a few sample entries. Both have clean seams
   for wiring a provider/persistent store later.
-- **Persistence is in-memory** on the backend (single document); it resets on
-  restart. Per-project SQLite + ProseMirror JSON is a follow-up.
+- **Persistence is a single JSON file** at `~/.logosforge/whiteboard.json`
+  (override with `LOGOSFORGE_DATA_DIR`); it survives backend/Electron restarts.
+  Multi-document / per-project storage is a follow-up.
 - **Editor is plain-text per block** — no inline marks/lists yet (kept honest so
   what you see is exactly what is saved).
 - **Packaging is shell-only** — the Python backend is not yet bundled into the

@@ -8,6 +8,8 @@ export interface WhiteboardBlock {
   type: string;
   text: string;
   level?: number | null;
+  /** Screenplay element type on a paragraph (Screenplay mode); persists. */
+  sp?: string | null;
 }
 
 export interface WhiteboardDocument {

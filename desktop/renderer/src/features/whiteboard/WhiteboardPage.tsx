@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { LogosFloatingBox } from '../logos/LogosFloatingBox';
 import { useWritingModes } from '../writingModes/useWritingModes';
 import { WritingModeSelector } from '../writingModes/WritingModeSelector';
+import { screenplayLabel } from './screenplay';
 import type { SaveStatus } from './types';
 import { useWhiteboardDocument } from './useWhiteboardDocument';
 import { WhiteboardEditor } from './WhiteboardEditor';
@@ -31,16 +32,26 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
   });
   const { modes, defaultMode } = useWritingModes({ baseUrl, ready });
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [spElement, setSpElement] = useState<string | null>(null);
+
+  const isScreenplay = doc?.mode === 'screenplay';
 
   return (
     <main className="whiteboard">
       <div className="wb-statusline">
-        <WritingModeSelector
-          modes={modes}
-          value={doc?.mode ?? defaultMode}
-          onChange={setMode}
-          disabled={!doc}
-        />
+        <div className="wb-statusline-left">
+          <WritingModeSelector
+            modes={modes}
+            value={doc?.mode ?? defaultMode}
+            onChange={setMode}
+            disabled={!doc}
+          />
+          {isScreenplay && (
+            <span className="sp-element" title="Screenplay element — press Tab to cycle">
+              {screenplayLabel(spElement)}
+            </span>
+          )}
+        </div>
         <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
       </div>
       <div className="wb-surface">
@@ -51,6 +62,7 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
             mode={doc.mode}
             onChangeBlocks={onChangeBlocks}
             onEditorReady={setEditor}
+            onElementChange={setSpElement}
           />
         ) : !ready ? (
           <p className="wb-hint">Waiting for backend…</p>
