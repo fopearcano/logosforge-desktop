@@ -8,7 +8,7 @@
  */
 
 import Placeholder from '@tiptap/extension-placeholder';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useRef } from 'react';
 
@@ -50,12 +50,15 @@ interface Props {
   initialBlocks: WhiteboardBlock[];
   mode: string;
   onChangeBlocks: (blocks: WhiteboardBlock[]) => void;
+  onEditorReady?: (editor: Editor) => void;
 }
 
-export function WhiteboardEditor({ initialBlocks, mode, onChangeBlocks }: Props) {
-  // Keep the latest callback without re-creating the editor.
+export function WhiteboardEditor({ initialBlocks, mode, onChangeBlocks, onEditorReady }: Props) {
+  // Keep the latest callbacks without re-creating the editor.
   const onChangeRef = useRef(onChangeBlocks);
   onChangeRef.current = onChangeBlocks;
+  const onReadyRef = useRef(onEditorReady);
+  onReadyRef.current = onEditorReady;
 
   const editor = useEditor({
     extensions: [
@@ -91,6 +94,11 @@ export function WhiteboardEditor({ initialBlocks, mode, onChangeBlocks }: Props)
   useEffect(() => {
     editor?.view.dom.setAttribute('data-writing-mode', mode);
   }, [editor, mode]);
+
+  // Expose the editor instance once ready (for the inline Logos assistant).
+  useEffect(() => {
+    if (editor) onReadyRef.current?.(editor);
+  }, [editor]);
 
   return <EditorContent editor={editor} />;
 }

@@ -1,5 +1,9 @@
-/** Composes the whiteboard: writing-mode selector + load/save state + editor. */
+/** Composes the whiteboard: writing-mode selector + load/save + editor + Logos. */
 
+import type { Editor } from '@tiptap/react';
+import { useState } from 'react';
+
+import { LogosFloatingBox } from '../logos/LogosFloatingBox';
 import { useWritingModes } from '../writingModes/useWritingModes';
 import { WritingModeSelector } from '../writingModes/WritingModeSelector';
 import type { SaveStatus } from './types';
@@ -26,6 +30,7 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
     onSaved,
   });
   const { modes, defaultMode } = useWritingModes({ baseUrl, ready });
+  const [editor, setEditor] = useState<Editor | null>(null);
 
   return (
     <main className="whiteboard">
@@ -51,9 +56,11 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
             initialBlocks={doc.blocks}
             mode={doc.mode}
             onChangeBlocks={onChangeBlocks}
+            onEditorReady={setEditor}
           />
         ) : null}
       </div>
+      {editor && doc && <LogosFloatingBox editor={editor} mode={doc.mode} baseUrl={baseUrl} />}
     </main>
   );
 }

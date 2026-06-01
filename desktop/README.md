@@ -97,6 +97,8 @@ npm run typecheck
 - A hideable **Outline** panel on the left (toggle with `☰` or Ctrl/Cmd+Shift+O).
 - A **PSYKE** panel (story-bible search) — open with the `PSYKE` button or
   Ctrl/Cmd+Shift+P; type to search, click a result for a simple detail view.
+- A **Logos** inline assistant — press Ctrl/Cmd+K in the editor to open a
+  floating box at the cursor; run a quick action and Replace/Insert the result.
 
 ## Editor (Phase 3)
 
@@ -169,6 +171,30 @@ Lightweight access to the PSYKE story bible, under
 
 > The backend currently serves a few **placeholder sample entries** so search is
 > demonstrable; a persistent, user-populated PSYKE store arrives later.
+
+## Logos inline assistant (Phase 7)
+
+Logos is an inline, Codex-style assistant **embedded in the writing surface**
+(not a chat panel), under `renderer/src/features/logos/` (`LogosFloatingBox`,
+`useLogosInline`, `logosApi`, `logosActions`, `types`).
+
+- **Open:** press **Ctrl/Cmd+K** in the editor — a floating box appears at the
+  cursor / selection (Esc or Ctrl/Cmd+K again closes).
+- **Context captured:** the selected text, the surrounding block, and the
+  current Writing Mode are sent to **`POST /api/logos/inline`**.
+- **Actions:** Suggest, Rewrite, Expand, Explain, Summarize, **Connect**
+  (searches PSYKE for entities in the selection), and **Mode pass** — plus a
+  free-text prompt.
+- **Apply:** results apply back into the document via ProseMirror transactions
+  (**Replace** the selection / **Insert below** / Copy / Dismiss).
+- **Graceful states:** thinking / error / placeholder note.
+- **Streaming-ready:** the backend currently returns a single response (the
+  service is an offline placeholder); the transport has a streaming seam and the
+  box renders output reactively, so wiring a real provider/stream needs no UI
+  change.
+
+> The backend Logos service is an offline, deterministic **placeholder** (no LLM
+> yet); a provider transport is wired in a later milestone.
 
 ## Notes & scope
 
