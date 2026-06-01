@@ -79,6 +79,15 @@ from `../backend`, polls `/health`, and reports status to the window.
 npm run preview     # builds the renderer + electron, then runs with --prod
 ```
 
+### Minimal packaging smoke (optional)
+
+```bash
+npm run pack        # builds, then electron-builder --dir -> release/ (unpacked app)
+```
+
+Packages only the Electron shell (no installer, no bundled backend) — see
+`../docs/PRO_TODO.md`.
+
 ### Type-check
 
 ```bash

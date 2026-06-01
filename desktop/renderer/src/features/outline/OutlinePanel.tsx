@@ -17,9 +17,7 @@ export function OutlinePanel({ baseUrl, ready, revision, onNavigate }: Props) {
     <aside className="outline-panel" aria-label="Outline">
       <div className="outline-header">Outline</div>
       <div className="outline-body">
-        {!ready ? (
-          <p className="outline-hint">Waiting for backend…</p>
-        ) : items.length > 0 ? (
+        {items.length > 0 ? (
           <ul className="outline-list">
             {items.map((item, index) => (
               <li key={item.id}>
@@ -35,6 +33,8 @@ export function OutlinePanel({ baseUrl, ready, revision, onNavigate }: Props) {
               </li>
             ))}
           </ul>
+        ) : !ready ? (
+          <p className="outline-hint">Waiting for backend…</p>
         ) : loading ? (
           <p className="outline-hint">Loading…</p>
         ) : error ? (

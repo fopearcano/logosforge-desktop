@@ -44,13 +44,7 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
         <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
       </div>
       <div className="wb-surface">
-        {!ready ? (
-          <p className="wb-hint">Waiting for backend…</p>
-        ) : loading ? (
-          <p className="wb-hint">Loading…</p>
-        ) : loadError ? (
-          <p className="wb-hint wb-error">Couldn’t load document: {loadError}</p>
-        ) : doc ? (
+        {doc ? (
           <WhiteboardEditor
             key={doc.id}
             initialBlocks={doc.blocks}
@@ -58,6 +52,12 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
             onChangeBlocks={onChangeBlocks}
             onEditorReady={setEditor}
           />
+        ) : !ready ? (
+          <p className="wb-hint">Waiting for backend…</p>
+        ) : loading ? (
+          <p className="wb-hint">Loading…</p>
+        ) : loadError ? (
+          <p className="wb-hint wb-error">Couldn’t load document: {loadError}</p>
         ) : null}
       </div>
       {editor && doc && <LogosFloatingBox editor={editor} mode={doc.mode} baseUrl={baseUrl} />}

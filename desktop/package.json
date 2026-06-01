@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "LogosForge Whiteboard — Electron + React + TypeScript desktop shell",
+  "author": "LogosForge",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k -n vite,electron -c blue,green \"npm:dev:renderer\" \"npm:dev:electron\"",
@@ -12,7 +13,8 @@
     "build:renderer": "vite build renderer",
     "build:electron": "tsc -p tsconfig.electron.json",
     "preview": "npm run build && electron . --prod",
-    "typecheck": "tsc -p tsconfig.electron.json --noEmit && tsc -p renderer/tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.electron.json --noEmit && tsc -p renderer/tsconfig.json --noEmit",
+    "pack": "npm run build && electron-builder --dir"
   },
   "dependencies": {
     "@tiptap/extension-placeholder": "^2.6.6",
@@ -29,6 +31,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^9.0.1",
     "electron": "^31.3.1",
+    "electron-builder": "^24.13.3",
     "typescript": "^5.5.4",
     "vite": "^5.4.2",
     "wait-on": "^8.0.1"

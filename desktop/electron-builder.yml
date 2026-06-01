@@ -1,0 +1,13 @@
+appId: com.logosforge.whiteboard
+productName: LogosForge Whiteboard
+directories:
+  output: release
+# Minimal packaging smoke config. The renderer is a self-contained Vite bundle
+# and the main process has no third-party runtime deps, so only the build
+# outputs + package.json need to be packed (no node_modules).
+files:
+  - dist-electron/**/*
+  - renderer/dist/**/*
+  - package.json
+# NOTE: this packages only the Electron shell. Bundling the Python backend as a
+# sidecar binary is a later milestone; see ../docs/PRO_TODO.md.
