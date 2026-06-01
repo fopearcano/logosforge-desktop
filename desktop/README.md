@@ -90,7 +90,29 @@ npm run typecheck
 - Window titled **LogosForge Whiteboard**.
 - A bottom status bar: a colored dot + `Backend: Connecting… / Connected /
   Unavailable`, and `API v1.0.0 · core 0.1.0` once connected.
-- A central blank placeholder sheet.
+- A central **writing sheet** (the TipTap editor) with a save indicator
+  (`Saving… / Saved / Save failed`) at the top-right.
+
+## Editor (Phase 3)
+
+The writing surface is a [TipTap](https://tiptap.dev) (ProseMirror) editor — the
+editor technology chosen in the architecture report — under
+`renderer/src/features/whiteboard/`:
+
+| File | Role |
+|---|---|
+| `WhiteboardPage.tsx` | Composes load/save state + editor + save indicator; loading/error states. |
+| `WhiteboardEditor.tsx` | The TipTap editor + block ↔ ProseMirror mapping. |
+| `useWhiteboardDocument.ts` | Loads `GET /api/whiteboard`, autosaves via `PUT /api/whiteboard` (700 ms debounce), tracks save status. |
+| `whiteboardApi.ts` | Frontend HTTP client for the whiteboard endpoints. |
+| `types.ts` | Shared DTO types. |
+
+It is intentionally minimal — a blank sheet with **paragraphs, headings
+(`#` / `##` / `###`), and undo/redo**. Inline marks (bold/italic) and lists are
+off for now because the backend persists plain text per block; richer content
+(canonical ProseMirror JSON) is a later milestone, so **what you see is exactly
+what is saved**. The editor loads once the backend reports connected and
+autosaves on edit.
 
 ## Notes & scope
 
