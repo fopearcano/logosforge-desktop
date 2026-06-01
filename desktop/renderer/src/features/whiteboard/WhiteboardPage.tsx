@@ -14,12 +14,14 @@ const SAVE_LABEL: Record<SaveStatus, string> = {
 interface Props {
   baseUrl: string;
   ready: boolean;
+  onSaved?: () => void;
 }
 
-export function WhiteboardPage({ baseUrl, ready }: Props) {
+export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
   const { doc, loading, loadError, saveStatus, onChangeBlocks } = useWhiteboardDocument({
     baseUrl,
     ready,
+    onSaved,
   });
 
   return (

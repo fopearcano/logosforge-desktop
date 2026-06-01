@@ -13,6 +13,8 @@ const SAVE_DEBOUNCE_MS = 700;
 interface Options {
   baseUrl: string;
   ready: boolean;
+  /** Called after each successful save (lets the outline refresh). */
+  onSaved?: () => void;
 }
 
 interface Result {
@@ -23,7 +25,10 @@ interface Result {
   onChangeBlocks: (blocks: WhiteboardBlock[]) => void;
 }
 
-export function useWhiteboardDocument({ baseUrl, ready }: Options): Result {
+export function useWhiteboardDocument({ baseUrl, ready, onSaved }: Options): Result {
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
+
   const [doc, setDoc] = useState<WhiteboardDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -63,6 +68,7 @@ export function useWhiteboardDocument({ baseUrl, ready }: Options): Result {
       const updated = await updateWhiteboard(baseUrl, { blocks });
       setDoc(updated);
       setSaveStatus('saved');
+      onSavedRef.current?.();
     } catch {
       setSaveStatus('error');
     }

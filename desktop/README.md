@@ -92,6 +92,7 @@ npm run typecheck
   Unavailable`, and `API v1.0.0 · core 0.1.0` once connected.
 - A central **writing sheet** (the TipTap editor) with a save indicator
   (`Saving… / Saved / Save failed`) at the top-right.
+- A hideable **Outline** panel on the left (toggle with `☰` or Ctrl/Cmd+Shift+O).
 
 ## Editor (Phase 3)
 
@@ -113,6 +114,21 @@ off for now because the backend persists plain text per block; richer content
 (canonical ProseMirror JSON) is a later milestone, so **what you see is exactly
 what is saved**. The editor loads once the backend reports connected and
 autosaves on edit.
+
+## Outline (Phase 4)
+
+A simple, hideable Outline panel on the left, under
+`renderer/src/features/outline/` (`OutlinePanel`, `useOutline`, `outlineApi`,
+`types`). It lists the document structure from **`GET /api/outline`** (headings,
+indented by level) and refreshes after each save.
+
+- **Toggle:** the `☰` button in the title bar, or **Ctrl/Cmd+Shift+O**.
+- **Hidden = gone:** when off, the panel is removed entirely (no collapsed rail)
+  and the editor expands to fill the space.
+- Clicking an item scrolls the editor to that heading.
+
+Minimal by design: a flat indented list — no drag/drop, no tree management, no
+Pro dockable-panel behavior.
 
 ## Notes & scope
 
