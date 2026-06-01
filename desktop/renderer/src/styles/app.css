@@ -160,8 +160,9 @@ body {
 .wb-statusline {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  height: 24px;
+  justify-content: space-between;
+  gap: 12px;
+  height: 28px;
   padding: 0 16px;
   font-size: 11px;
   color: var(--muted);
@@ -169,6 +170,47 @@ body {
 
 .wb-save-error {
   color: var(--error);
+}
+
+.mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mode-select {
+  padding: 2px 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.mode-select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mode-vocab {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Per-mode editor typography: screenplay & stage use a monospaced face
+   (a real convention), keyed off the data attribute the editor sets. */
+.wb-editor[data-writing-mode='screenplay'],
+.wb-editor[data-writing-mode='stage_script'] {
+  font-family: "Courier New", "Courier Prime", ui-monospace, monospace;
+  font-size: 16px;
 }
 
 .wb-surface {

@@ -10,7 +10,7 @@
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 import type { WhiteboardBlock } from './types';
 
@@ -48,10 +48,11 @@ function docToBlocks(json: any): WhiteboardBlock[] {
 
 interface Props {
   initialBlocks: WhiteboardBlock[];
+  mode: string;
   onChangeBlocks: (blocks: WhiteboardBlock[]) => void;
 }
 
-export function WhiteboardEditor({ initialBlocks, onChangeBlocks }: Props) {
+export function WhiteboardEditor({ initialBlocks, mode, onChangeBlocks }: Props) {
   // Keep the latest callback without re-creating the editor.
   const onChangeRef = useRef(onChangeBlocks);
   onChangeRef.current = onChangeBlocks;
@@ -83,6 +84,13 @@ export function WhiteboardEditor({ initialBlocks, onChangeBlocks }: Props) {
       onChangeRef.current(docToBlocks(ed.getJSON()));
     },
   });
+
+  // Reflect the active writing mode on the editor surface. This is the clean
+  // boundary for future per-mode behavior (element grammars, schemas); today it
+  // drives a small typographic change (screenplay/stage use a monospaced face).
+  useEffect(() => {
+    editor?.view.dom.setAttribute('data-writing-mode', mode);
+  }, [editor, mode]);
 
   return <EditorContent editor={editor} />;
 }

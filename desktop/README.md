@@ -92,6 +92,8 @@ npm run typecheck
   Unavailable`, and `API v1.0.0 · core 0.1.0` once connected.
 - A central **writing sheet** (the TipTap editor) with a save indicator
   (`Saving… / Saved / Save failed`) at the top-right.
+- A small **Writing Mode** dropdown in the status line (Novel, Screenplay, …)
+  with the mode's structural vocabulary.
 - A hideable **Outline** panel on the left (toggle with `☰` or Ctrl/Cmd+Shift+O).
 
 ## Editor (Phase 3)
@@ -129,6 +131,24 @@ indented by level) and refreshes after each save.
 
 Minimal by design: a flat indented list — no drag/drop, no tree management, no
 Pro dockable-panel behavior.
+
+## Writing Modes (Phase 5)
+
+The five StoryPlanner Writing Modes (Novel, Screenplay, Graphic Novel, Stage
+Script, Series) are loaded from **`GET /api/writing-modes`** and selectable from
+a small keyboard-accessible dropdown in the editor's status line, under
+`renderer/src/features/writingModes/` (`WritingModeSelector`, `useWritingModes`,
+`writingModesApi`, `types`).
+
+- Selecting a mode persists it on the document (`PUT /api/whiteboard { mode }`,
+  partial update) and shows the mode's structural vocabulary (e.g. *Acts /
+  Sequences / Scenes*); the dropdown tooltip shows its medium constraints.
+- The editor reacts via a `data-writing-mode` attribute on the writing surface —
+  the clean boundary for future per-mode element grammars. Today Screenplay and
+  Stage Script switch the surface to a monospaced typeface (a real convention).
+- Only StoryPlanner-derived modes are used; none are invented. The backend
+  already serves the modes and normalizes the document mode, so no backend
+  change was needed. Full per-mode element formatting is deferred.
 
 ## Notes & scope
 

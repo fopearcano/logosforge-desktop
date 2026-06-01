@@ -1,5 +1,7 @@
-/** Composes the whiteboard: load/save state + the editor + save indicator. */
+/** Composes the whiteboard: writing-mode selector + load/save state + editor. */
 
+import { useWritingModes } from '../writingModes/useWritingModes';
+import { WritingModeSelector } from '../writingModes/WritingModeSelector';
 import type { SaveStatus } from './types';
 import { useWhiteboardDocument } from './useWhiteboardDocument';
 import { WhiteboardEditor } from './WhiteboardEditor';
@@ -18,15 +20,22 @@ interface Props {
 }
 
 export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
-  const { doc, loading, loadError, saveStatus, onChangeBlocks } = useWhiteboardDocument({
+  const { doc, loading, loadError, saveStatus, onChangeBlocks, setMode } = useWhiteboardDocument({
     baseUrl,
     ready,
     onSaved,
   });
+  const { modes, defaultMode } = useWritingModes({ baseUrl, ready });
 
   return (
     <main className="whiteboard">
       <div className="wb-statusline">
+        <WritingModeSelector
+          modes={modes}
+          value={doc?.mode ?? defaultMode}
+          onChange={setMode}
+          disabled={!doc}
+        />
         <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
       </div>
       <div className="wb-surface">
@@ -37,7 +46,12 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
         ) : loadError ? (
           <p className="wb-hint wb-error">Couldn’t load document: {loadError}</p>
         ) : doc ? (
-          <WhiteboardEditor key={doc.id} initialBlocks={doc.blocks} onChangeBlocks={onChangeBlocks} />
+          <WhiteboardEditor
+            key={doc.id}
+            initialBlocks={doc.blocks}
+            mode={doc.mode}
+            onChangeBlocks={onChangeBlocks}
+          />
         ) : null}
       </div>
     </main>

@@ -23,6 +23,7 @@ interface Result {
   loadError: string | null;
   saveStatus: SaveStatus;
   onChangeBlocks: (blocks: WhiteboardBlock[]) => void;
+  setMode: (mode: string) => void;
 }
 
 export function useWhiteboardDocument({ baseUrl, ready, onSaved }: Options): Result {
@@ -86,6 +87,22 @@ export function useWhiteboardDocument({ baseUrl, ready, onSaved }: Options): Res
     [flush],
   );
 
+  // A deliberate, immediate save of just the writing mode (partial update).
+  const setMode = useCallback(
+    async (mode: string) => {
+      setSaveStatus('saving');
+      try {
+        const updated = await updateWhiteboard(baseUrl, { mode });
+        setDoc(updated);
+        setSaveStatus('saved');
+        onSavedRef.current?.();
+      } catch {
+        setSaveStatus('error');
+      }
+    },
+    [baseUrl],
+  );
+
   // Clear any pending debounce on unmount.
   useEffect(
     () => () => {
@@ -94,5 +111,5 @@ export function useWhiteboardDocument({ baseUrl, ready, onSaved }: Options): Res
     [],
   );
 
-  return { doc, loading, loadError, saveStatus, onChangeBlocks };
+  return { doc, loading, loadError, saveStatus, onChangeBlocks, setMode };
 }
