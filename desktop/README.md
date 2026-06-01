@@ -95,6 +95,8 @@ npm run typecheck
 - A small **Writing Mode** dropdown in the status line (Novel, Screenplay, …)
   with the mode's structural vocabulary.
 - A hideable **Outline** panel on the left (toggle with `☰` or Ctrl/Cmd+Shift+O).
+- A **PSYKE** panel (story-bible search) — open with the `PSYKE` button or
+  Ctrl/Cmd+Shift+P; type to search, click a result for a simple detail view.
 
 ## Editor (Phase 3)
 
@@ -149,6 +151,24 @@ a small keyboard-accessible dropdown in the editor's status line, under
 - Only StoryPlanner-derived modes are used; none are invented. The backend
   already serves the modes and normalizes the document mode, so no backend
   change was needed. Full per-mode element formatting is deferred.
+
+## PSYKE (Phase 6)
+
+Lightweight access to the PSYKE story bible, under
+`renderer/src/features/psyke/` (`PsykeWindow`, `PsykeSearch`, `usePsykeSearch`,
+`psykeApi`, `types`). It opens as a simple floating panel on the right.
+
+- **Open/close:** the `PSYKE` title-bar button or **Ctrl/Cmd+Shift+P** (Esc also
+  closes). If text is selected in the editor when you open it, the search box is
+  pre-filled with that selection (contextual lookup).
+- **Search → list → detail:** queries **`GET /api/psyke/search?q=`** (matches
+  names and aliases), shows a result list with type badges, and a simple detail
+  view (name / type / aliases) on click.
+- Minimal by design: **no graph visualization, no Pro Codex workspace, no full
+  dockable panel system.**
+
+> The backend currently serves a few **placeholder sample entries** so search is
+> demonstrable; a persistent, user-populated PSYKE store arrives later.
 
 ## Notes & scope
 

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { bridge, type BackendStatus } from './api/backend';
 import { StatusBar } from './components/StatusBar';
 import { OutlinePanel } from './features/outline/OutlinePanel';
 import type { OutlineItem } from './features/outline/types';
+import { PsykeWindow } from './features/psyke/PsykeWindow';
 import { DEFAULT_BASE_URL } from './features/whiteboard/whiteboardApi';
 import { WhiteboardPage } from './features/whiteboard/WhiteboardPage';
 
@@ -17,6 +18,10 @@ function scrollToHeading(index: number) {
   });
 }
 
+function currentSelectionText(): string {
+  return window.getSelection()?.toString().trim() ?? '';
+}
+
 export function App() {
   const [status, setStatus] = useState<BackendStatus>({
     state: 'connecting',
@@ -25,6 +30,11 @@ export function App() {
   });
   const [outlineVisible, setOutlineVisible] = useState(true);
   const [revision, setRevision] = useState(0);
+  const [psykeOpen, setPsykeOpen] = useState(false);
+  const [psykeQuery, setPsykeQuery] = useState('');
+
+  const psykeOpenRef = useRef(psykeOpen);
+  psykeOpenRef.current = psykeOpen;
 
   useEffect(() => {
     let active = true;
@@ -38,12 +48,22 @@ export function App() {
     };
   }, []);
 
-  // Toggle the outline with Ctrl/Cmd+Shift+O.
+  // Global shortcuts: Outline (Ctrl/Cmd+Shift+O), PSYKE (Ctrl/Cmd+Shift+P).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyO') {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !e.shiftKey) return;
+      if (e.code === 'KeyO') {
         e.preventDefault();
         setOutlineVisible((v) => !v);
+      } else if (e.code === 'KeyP') {
+        e.preventDefault();
+        if (psykeOpenRef.current) {
+          setPsykeOpen(false);
+        } else {
+          setPsykeQuery(currentSelectionText());
+          setPsykeOpen(true);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
@@ -53,6 +73,10 @@ export function App() {
   const baseUrl = status.baseUrl || DEFAULT_BASE_URL;
   const ready = status.state === 'connected';
 
+  const openPsyke = () => {
+    setPsykeQuery(currentSelectionText());
+    setPsykeOpen(true);
+  };
   const handleNavigate = (_item: OutlineItem, index: number) => scrollToHeading(index);
 
   return (
@@ -68,6 +92,15 @@ export function App() {
           ☰
         </button>
         <h1 className="app-title">LogosForge Whiteboard</h1>
+        <button
+          type="button"
+          className={`psyke-toggle${psykeOpen ? ' is-active' : ''}`}
+          onClick={() => (psykeOpen ? setPsykeOpen(false) : openPsyke())}
+          aria-pressed={psykeOpen}
+          title="Toggle PSYKE (Ctrl/Cmd+Shift+P)"
+        >
+          PSYKE
+        </button>
       </header>
       <div className="workarea">
         {outlineVisible && (
@@ -80,6 +113,9 @@ export function App() {
         )}
         <WhiteboardPage baseUrl={baseUrl} ready={ready} onSaved={() => setRevision((r) => r + 1)} />
       </div>
+      {psykeOpen && (
+        <PsykeWindow baseUrl={baseUrl} initialQuery={psykeQuery} onClose={() => setPsykeOpen(false)} />
+      )}
       <StatusBar status={status} />
     </div>
   );
