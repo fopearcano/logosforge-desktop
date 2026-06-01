@@ -7,15 +7,14 @@ import type { OutlineItem } from './features/outline/types';
 import { PsykeWindow } from './features/psyke/PsykeWindow';
 import { DEFAULT_BASE_URL } from './features/whiteboard/whiteboardApi';
 import { WhiteboardPage } from './features/whiteboard/WhiteboardPage';
+import { useTheme } from './theme';
 
-function scrollToHeading(index: number) {
-  // Outline items are headings in document order, matching the editor's
-  // h1/h2/h3 elements one-for-one, so the array index addresses the DOM node.
-  const headings = document.querySelectorAll('.wb-editor h1, .wb-editor h2, .wb-editor h3');
-  (headings[index] as HTMLElement | undefined)?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  });
+function scrollToBlock(index: number) {
+  // Outline items carry the source block index; the editor's top-level children
+  // are those blocks in order.
+  const surface = document.querySelector('.wb-editor');
+  const child = surface?.children[index] as HTMLElement | undefined;
+  child?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function currentSelectionText(): string {
@@ -23,13 +22,14 @@ function currentSelectionText(): string {
 }
 
 export function App() {
+  const [theme, toggleTheme] = useTheme();
   const [status, setStatus] = useState<BackendStatus>({
     state: 'connecting',
     baseUrl: '',
     managed: false,
   });
   const [outlineVisible, setOutlineVisible] = useState(true);
-  const [revision, setRevision] = useState(0);
+  const [outlineItems, setOutlineItems] = useState<OutlineItem[]>([]);
   const [psykeOpen, setPsykeOpen] = useState(false);
   const [psykeQuery, setPsykeQuery] = useState('');
 
@@ -77,14 +77,13 @@ export function App() {
     setPsykeQuery(currentSelectionText());
     setPsykeOpen(true);
   };
-  const handleNavigate = (_item: OutlineItem, index: number) => scrollToHeading(index);
 
   return (
     <div className="app">
       <header className="titlebar">
         <button
           type="button"
-          className={`outline-toggle${outlineVisible ? ' is-active' : ''}`}
+          className={`icon-toggle${outlineVisible ? ' is-active' : ''}`}
           onClick={() => setOutlineVisible((v) => !v)}
           aria-pressed={outlineVisible}
           title="Toggle Outline (Ctrl/Cmd+Shift+O)"
@@ -92,26 +91,32 @@ export function App() {
           ☰
         </button>
         <h1 className="app-title">LogosForge Whiteboard</h1>
-        <button
-          type="button"
-          className={`psyke-toggle${psykeOpen ? ' is-active' : ''}`}
-          onClick={() => (psykeOpen ? setPsykeOpen(false) : openPsyke())}
-          aria-pressed={psykeOpen}
-          title="Toggle PSYKE (Ctrl/Cmd+Shift+P)"
-        >
-          PSYKE
-        </button>
+        <div className="titlebar-right">
+          <button
+            type="button"
+            className="icon-toggle"
+            onClick={toggleTheme}
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? '☾' : '☀'}
+          </button>
+          <button
+            type="button"
+            className={`psyke-toggle${psykeOpen ? ' is-active' : ''}`}
+            onClick={() => (psykeOpen ? setPsykeOpen(false) : openPsyke())}
+            aria-pressed={psykeOpen}
+            title="Toggle PSYKE (Ctrl/Cmd+Shift+P)"
+          >
+            PSYKE
+          </button>
+        </div>
       </header>
       <div className="workarea">
         {outlineVisible && (
-          <OutlinePanel
-            baseUrl={baseUrl}
-            ready={ready}
-            revision={revision}
-            onNavigate={handleNavigate}
-          />
+          <OutlinePanel items={outlineItems} onNavigate={(item) => scrollToBlock(item.blockIndex)} />
         )}
-        <WhiteboardPage baseUrl={baseUrl} ready={ready} onSaved={() => setRevision((r) => r + 1)} />
+        <WhiteboardPage baseUrl={baseUrl} ready={ready} onOutlineChange={setOutlineItems} />
       </div>
       {psykeOpen && (
         <PsykeWindow baseUrl={baseUrl} initialQuery={psykeQuery} onClose={() => setPsykeOpen(false)} />

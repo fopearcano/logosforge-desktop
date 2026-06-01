@@ -1,18 +1,20 @@
 /**
  * The TipTap (ProseMirror) writing surface.
  *
- * Minimal blank-sheet schema: paragraphs + headings + undo/redo, with a
- * Screenplay-element attribute (`sp`) on paragraphs (see ./screenplay). Inline
- * marks and lists stay off; content maps 1:1 to the backend's flat `blocks`
- * contract (including `sp`, so screenplay element types persist).
+ * Per-mode behavior comes from the mode registry (./modes): Screenplay applies
+ * Fountain inference + screenplay keyboard (./fountainExtension); prose modes are
+ * plain paragraphs/headings. Content maps 1:1 to the backend's `blocks` contract.
  */
 
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { ScreenplayElements } from './screenplay';
+import type { FountainType } from './fountain';
+import { FountainEditing, fountainKey, currentFountainType } from './fountainExtension';
+import { modeBehavior } from './modes';
+import { ScreenplayAutocomplete } from './ScreenplayAutocomplete';
 import type { WhiteboardBlock } from './types';
 
 // --- block <-> ProseMirror document mapping --------------------------------
@@ -45,10 +47,6 @@ function docToBlocks(json: any): WhiteboardBlock[] {
   });
 }
 
-function currentScreenplayElement(ed: Editor): string | null {
-  return (ed.getAttributes('paragraph').sp as string | null | undefined) ?? null;
-}
-
 // --- component --------------------------------------------------------------
 
 interface Props {
@@ -56,8 +54,15 @@ interface Props {
   mode: string;
   onChangeBlocks: (blocks: WhiteboardBlock[]) => void;
   onEditorReady?: (editor: Editor) => void;
-  /** Reports the screenplay element type at the cursor (for the status line). */
-  onElementChange?: (sp: string | null) => void;
+  /** Reports the inferred screenplay element at the cursor (for the status line). */
+  onElementChange?: (type: FountainType | null) => void;
+}
+
+interface AcState {
+  open: boolean;
+  left: number;
+  top: number;
+  suggestions: string[];
 }
 
 export function WhiteboardEditor({
@@ -67,13 +72,17 @@ export function WhiteboardEditor({
   onEditorReady,
   onElementChange,
 }: Props) {
-  // Keep the latest callbacks without re-creating the editor.
   const onChangeRef = useRef(onChangeBlocks);
   onChangeRef.current = onChangeBlocks;
   const onReadyRef = useRef(onEditorReady);
   onReadyRef.current = onEditorReady;
   const onElementRef = useRef(onElementChange);
   onElementRef.current = onElementChange;
+
+  const [ac, setAc] = useState<AcState>({ open: false, left: 0, top: 0, suggestions: [] });
+  const openAcRef = useRef((ctx: { left: number; top: number; suggestions: string[] }) =>
+    setAc({ open: true, ...ctx }),
+  );
 
   const editor = useEditor({
     extensions: [
@@ -91,8 +100,8 @@ export function WhiteboardEditor({
         listItem: false,
         hardBreak: false,
       }),
-      ScreenplayElements,
-      Placeholder.configure({ placeholder: 'Start writing…' }),
+      FountainEditing.configure({ onAutocomplete: (ctx) => openAcRef.current(ctx) }),
+      Placeholder.configure({ placeholder: modeBehavior(mode).placeholder }),
     ],
     content: blocksToDoc(initialBlocks),
     autofocus: 'end',
@@ -101,26 +110,41 @@ export function WhiteboardEditor({
     },
     onUpdate: ({ editor: ed }) => {
       onChangeRef.current(docToBlocks(ed.getJSON()));
-      onElementRef.current?.(currentScreenplayElement(ed));
+      onElementRef.current?.(currentFountainType(ed));
     },
     onSelectionUpdate: ({ editor: ed }) => {
-      onElementRef.current?.(currentScreenplayElement(ed));
+      onElementRef.current?.(currentFountainType(ed));
     },
   });
 
-  // Reflect the active writing mode on the editor surface (drives Screenplay
-  // element formatting in CSS, scoped to Screenplay mode).
+  // Reflect the mode on the surface (drives per-mode typography) and tell the
+  // Fountain plugin whether to infer/format (reliable, no DOM-timing race).
   useEffect(() => {
-    editor?.view.dom.setAttribute('data-writing-mode', mode);
+    if (!editor) return;
+    editor.view.dom.setAttribute('data-writing-mode', mode);
+    editor.view.dispatch(editor.state.tr.setMeta(fountainKey, { screenplay: mode === 'screenplay' }));
   }, [editor, mode]);
 
-  // Expose the editor instance once ready (for the inline Logos assistant) and
-  // report the initial screenplay element.
   useEffect(() => {
     if (!editor) return;
     onReadyRef.current?.(editor);
-    onElementRef.current?.(currentScreenplayElement(editor));
+    onElementRef.current?.(currentFountainType(editor));
   }, [editor]);
 
-  return <EditorContent editor={editor} />;
+  return (
+    <>
+      <EditorContent editor={editor} />
+      <ScreenplayAutocomplete
+        open={ac.open}
+        left={ac.left}
+        top={ac.top}
+        suggestions={ac.suggestions}
+        onSelect={(text) => {
+          editor?.chain().focus().insertContent(text).run();
+          setAc((s) => ({ ...s, open: false }));
+        }}
+        onClose={() => setAc((s) => ({ ...s, open: false }))}
+      />
+    </>
+  );
 }

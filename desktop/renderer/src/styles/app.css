@@ -1,20 +1,40 @@
+/* ============================ Theme tokens ============================ */
+/* Default = Light (Slugline-like light mode). [data-theme='dark'] overrides. */
 :root {
-  --bg: #0e0f13;
-  --panel: #15171d;
-  --border: #262a33;
-  --text: #e6e8ee;
-  --muted: #8b90a0;
-  --error: #f87171;
-  --ok: #4ade80;
-  --accent: #7aa2f7;
-  --hover: rgba(255, 255, 255, 0.05);
-  --selection: rgba(122, 162, 247, 0.25);
-  /* White writing sheet (vintage typewriter): warm paper + dark ink. */
-  --paper: #f4f1e8;
+  --bg: #eceae4;
+  --panel: #f3f1ec;
+  --border: #ddd9d0;
+  --text: #2c2a26;
+  --muted: #8a867c;
+  --error: #c0392b;
+  --ok: #2e8b57;
+  --accent: #3b6fd4;
+  --hover: rgba(0, 0, 0, 0.05);
+  --selection: rgba(59, 111, 212, 0.16);
+  --paper: #fdfcf8;
   --ink: #23211c;
-  --paper-muted: #9c968a;
-  --paper-selection: rgba(43, 41, 34, 0.14);
+  --paper-muted: #a8a497;
+  --paper-selection: rgba(59, 111, 212, 0.14);
+  --page-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 10px 30px rgba(0, 0, 0, 0.06);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+[data-theme='dark'] {
+  --bg: #1a1b1e;
+  --panel: #1e1f23;
+  --border: #2c2e33;
+  --text: #e2e2df;
+  --muted: #888c95;
+  --error: #f08a8a;
+  --ok: #6cc58f;
+  --accent: #7aa2f7;
+  --hover: rgba(255, 255, 255, 0.06);
+  --selection: rgba(122, 162, 247, 0.25);
+  --paper: #25262b;
+  --ink: #e4e4e0;
+  --paper-muted: #7e828a;
+  --paper-selection: rgba(122, 162, 247, 0.22);
+  --page-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 * {
@@ -39,11 +59,12 @@ body {
   height: 100vh;
 }
 
+/* ============================ Title bar (quiet) ============================ */
 .titlebar {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 44px;
+  height: 42px;
   padding: 0 12px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
@@ -51,12 +72,20 @@ body {
 
 .app-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
-.outline-toggle {
+.titlebar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -71,30 +100,49 @@ body {
   cursor: pointer;
 }
 
-.outline-toggle:hover {
+.icon-toggle:hover {
   color: var(--text);
   background: var(--hover);
 }
 
-.outline-toggle.is-active {
+.icon-toggle.is-active {
   color: var(--text);
 }
 
-/* ---- Work area (outline + editor) --------------------------------------- */
+.psyke-toggle {
+  padding: 3px 10px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
 
+.psyke-toggle:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.psyke-toggle.is-active {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+/* ============================ Work area ============================ */
 .workarea {
   display: flex;
   flex: 1;
   min-height: 0;
 }
 
-/* ---- Outline panel ------------------------------------------------------- */
-
+/* ============================ Outline ============================ */
 .outline-panel {
   display: flex;
-  flex: 0 0 240px;
+  flex: 0 0 232px;
   flex-direction: column;
-  width: 240px;
+  width: 232px;
   min-height: 0;
   background: var(--panel);
   border-right: 1px solid var(--border);
@@ -103,7 +151,7 @@ body {
 .outline-header {
   display: flex;
   align-items: center;
-  height: 24px;
+  height: 28px;
   padding: 0 12px;
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -122,10 +170,6 @@ body {
   padding: 8px 12px;
   color: var(--muted);
   font-size: 12px;
-}
-
-.outline-hint.outline-error {
-  color: var(--error);
 }
 
 .outline-list {
@@ -154,8 +198,20 @@ body {
   background: var(--hover);
 }
 
-/* ---- Whiteboard ---------------------------------------------------------- */
+.outline-section {
+  font-weight: 600;
+}
 
+.outline-synopsis {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.outline-note {
+  color: var(--muted);
+}
+
+/* ============================ Whiteboard / editor ============================ */
 .whiteboard {
   display: flex;
   flex: 1;
@@ -169,10 +225,16 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  height: 28px;
+  height: 30px;
   padding: 0 16px;
   font-size: 11px;
   color: var(--muted);
+}
+
+.wb-statusline-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .wb-save-error {
@@ -212,12 +274,6 @@ body {
   color: var(--muted);
 }
 
-.wb-statusline-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .sp-element {
   padding: 1px 8px;
   border: 1px solid var(--border);
@@ -226,36 +282,12 @@ body {
   color: var(--muted);
 }
 
-/* Minimal Screenplay element formatting (scoped to Screenplay mode). The
-   element type is the paragraph's `data-sp` attribute; Tab cycles it. */
-.wb-editor[data-writing-mode='screenplay'] p[data-sp='scene_heading'] {
-  margin-top: 1.5em;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.wb-editor[data-writing-mode='screenplay'] p[data-sp='character'] {
-  margin: 1.2em 0 0 20ch;
-  text-transform: uppercase;
-}
-.wb-editor[data-writing-mode='screenplay'] p[data-sp='dialogue'] {
-  margin: 0 12ch 0 10ch;
-}
-.wb-editor[data-writing-mode='screenplay'] p[data-sp='parenthetical'] {
-  margin: 0 16ch;
-  font-style: italic;
-}
-.wb-editor[data-writing-mode='screenplay'] p[data-sp='transition'] {
-  margin-top: 1em;
-  text-align: right;
-  text-transform: uppercase;
-}
-
 .wb-surface {
   display: flex;
   flex: 1;
   justify-content: center;
   overflow-y: auto;
-  padding: 6vh 32px 30vh;
+  padding: 32px 24px 30vh;
 }
 
 .wb-hint {
@@ -268,20 +300,29 @@ body {
   color: var(--error);
 }
 
-/* The editable writing surface: a warm paper sheet on the dark app shell. */
+/* The writing page — large, comfortable, theme-aware. */
 .wb-editor {
-  width: min(46rem, 100%);
-  min-height: 60vh;
-  padding: 56px clamp(28px, 7vw, 72px);
+  width: min(54rem, 100%);
+  min-height: 64vh;
+  padding: 48px clamp(28px, 8%, 84px);
   background: var(--paper);
   color: var(--ink);
-  caret-color: var(--ink);
-  border-radius: 3px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 44px rgba(0, 0, 0, 0.38);
+  caret-color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: var(--page-shadow);
   outline: none;
-  font-family: "Courier Prime", "Courier New", "Courier", ui-monospace, monospace;
-  font-size: 17px;
+  font-family: "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif;
+  font-size: 18px;
   line-height: 1.7;
+}
+
+/* Screenplay & stage use a typewriter monospace surface. */
+.wb-editor[data-writing-mode='screenplay'],
+.wb-editor[data-writing-mode='stage_script'] {
+  font-family: "Courier Prime", "Courier New", "Courier", ui-monospace, monospace;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .wb-editor ::selection {
@@ -294,25 +335,23 @@ body {
 
 .wb-editor h1 {
   margin: 1.2em 0 0.5em;
-  font-size: 1.7em;
+  font-size: 1.6em;
   font-weight: 650;
   line-height: 1.25;
 }
 
 .wb-editor h2 {
   margin: 1.1em 0 0.4em;
-  font-size: 1.4em;
+  font-size: 1.35em;
   font-weight: 650;
-  line-height: 1.3;
 }
 
 .wb-editor h3 {
   margin: 1em 0 0.3em;
-  font-size: 1.2em;
+  font-size: 1.18em;
   font-weight: 650;
 }
 
-/* TipTap placeholder for an empty first line. */
 .wb-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -322,12 +361,83 @@ body {
   pointer-events: none;
 }
 
-/* ---- Status bar ---------------------------------------------------------- */
+/* Screenplay element formatting — inferred (Fountain) via decorations,
+   scoped to Screenplay mode; `ch` units approximate screenplay indents. */
+.wb-editor[data-writing-mode='screenplay'] p.sp-scene_heading {
+  margin-top: 1.5em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-character {
+  margin: 1.1em 0 0 20ch;
+  text-transform: uppercase;
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-dialogue {
+  margin: 0 12ch 0 10ch;
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-parenthetical {
+  margin: 0 16ch;
+  font-style: italic;
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-transition {
+  margin-top: 1em;
+  text-align: right;
+  text-transform: uppercase;
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-section {
+  font-weight: 700;
+  color: var(--accent);
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-synopsis {
+  color: var(--paper-muted);
+  font-style: italic;
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-note {
+  color: var(--accent);
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-centered {
+  text-align: center;
+}
+.wb-editor[data-writing-mode='screenplay'] p.sp-page_break {
+  text-align: center;
+  letter-spacing: 0.4em;
+  color: var(--paper-muted);
+}
 
+/* Screenplay autocomplete popup. */
+.sp-autocomplete {
+  position: fixed;
+  z-index: 40;
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  outline: none;
+  font-size: 13px;
+}
+
+.sp-ac-item {
+  padding: 5px 10px;
+  border-radius: 4px;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sp-ac-item.is-active,
+.sp-ac-item:hover {
+  background: var(--hover);
+}
+
+/* ============================ Status bar ============================ */
 .statusbar {
   display: flex;
   align-items: center;
-  height: 28px;
+  height: 26px;
   padding: 0 12px;
   background: var(--panel);
   border-top: 1px solid var(--border);
@@ -356,42 +466,19 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- PSYKE (floating panel) --------------------------------------------- */
-
-.psyke-toggle {
-  margin-left: auto;
-  padding: 3px 10px;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-}
-
-.psyke-toggle:hover {
-  color: var(--text);
-  background: var(--hover);
-}
-
-.psyke-toggle.is-active {
-  color: var(--text);
-  border-color: var(--muted);
-}
-
+/* ============================ PSYKE (floating panel) ============================ */
 .psyke-window {
   position: fixed;
-  top: 44px;
+  top: 42px;
   right: 0;
-  bottom: 28px;
+  bottom: 26px;
   z-index: 20;
   display: flex;
   flex-direction: column;
   width: 320px;
   background: var(--panel);
   border-left: 1px solid var(--border);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.28);
 }
 
 .psyke-header {
@@ -541,8 +628,7 @@ body {
   color: var(--muted);
 }
 
-/* ---- Logos inline assistant (floating box) ------------------------------ */
-
+/* ============================ Logos (floating box) ============================ */
 .logos-box {
   position: fixed;
   z-index: 30;
@@ -554,7 +640,7 @@ body {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   font-size: 13px;
 }
 
@@ -689,17 +775,16 @@ body {
   opacity: 0.5;
 }
 
-/* ---- Polish ------------------------------------------------------------- */
-
+/* ============================ Polish ============================ */
 ::selection {
   background: var(--selection);
 }
 
-/* Thin, unobtrusive scrollbars for the writing-first surfaces. */
 .wb-surface,
 .outline-body,
 .psyke-body,
-.logos-output {
+.logos-output,
+.sp-autocomplete {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
@@ -707,14 +792,16 @@ body {
 .wb-surface::-webkit-scrollbar,
 .outline-body::-webkit-scrollbar,
 .psyke-body::-webkit-scrollbar,
-.logos-output::-webkit-scrollbar {
+.logos-output::-webkit-scrollbar,
+.sp-autocomplete::-webkit-scrollbar {
   width: 10px;
 }
 
 .wb-surface::-webkit-scrollbar-thumb,
 .outline-body::-webkit-scrollbar-thumb,
 .psyke-body::-webkit-scrollbar-thumb,
-.logos-output::-webkit-scrollbar-thumb {
+.logos-output::-webkit-scrollbar-thumb,
+.sp-autocomplete::-webkit-scrollbar-thumb {
   background: var(--border);
   background-clip: content-box;
   border: 3px solid transparent;

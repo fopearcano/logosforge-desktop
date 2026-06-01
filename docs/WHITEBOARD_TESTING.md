@@ -194,20 +194,58 @@ backend isn't running it tells you how to start it.
    persists. Saved content lives at `~/.logosforge/whiteboard.json` (override the
    directory with `LOGOSFORGE_DATA_DIR`).
 
-### Screenplay test
-1. Set the **Mode** selector to **Screenplay**. The status line shows the current
-   element (e.g. *Action*); the sheet uses a typewriter monospace face.
-2. Type a line, then press **Tab** — the element cycles (Scene Heading → Action →
-   Character → Dialogue → Parenthetical → Transition) and the formatting changes
-   (uppercase / indents / right-aligned transition). **Shift+Tab** cycles back.
-3. ✅ Tab never moves focus out of the editor; normal typing still works.
-4. Element types are saved with the document (persist across restart).
+### UI theme test
+1. Use the **☾ / ☀** button in the title bar to switch **Light** / **Dark**.
+2. ✅ Light: soft light-gray app, white paper page, dark charcoal text, subtle shadow.
+3. ✅ Dark: dark shell, dark *integrated* page, readable light text (no HUD styling).
+4. ✅ Editor text stays readable and the Outline stays usable in both themes.
+5. The choice persists across restarts.
 
-### Theme test
-1. ✅ The editor is a **white / warm paper sheet** with a subtle shadow on the
-   dark app shell.
-2. ✅ Text is **dark charcoal** in a **typewriter monospace** font.
-3. The surrounding chrome (title bar, panels, status bar) stays dark.
+### Screenplay inference test
+Set **Mode → Screenplay**, then type:
+
+```
+INT. HOME - DAY
+
+JOHN
+Hello there.
+(quietly)
+This is a test.
+
+CUT TO:
+```
+
+Expected (classification is automatic — no manual block cycling):
+* `INT. HOME - DAY` → **Scene Heading** (uppercase, bold).
+* `JOHN` → **Character**; `Hello there.` → **Dialogue** (indented unlike Action).
+* `(quietly)` → **Parenthetical**; `This is a test.` → **Dialogue**.
+* `CUT TO:` → **Transition** (right-aligned).
+* The status line shows the inferred element at the cursor.
+
+### Fountain structure test
+Still in Screenplay mode, type:
+
+```
+# Act One
+
+= Opening image
+[[Need stronger hook]]
+```
+
+Expected: the **Outline** shows **Act One** (section), **Opening image**
+(synopsis) and **Need stronger hook** (note). Clicking an item scrolls to it.
+
+### Other modes test
+1. Switch **Mode → Novel**: the page uses a serif prose face; typing `INT. HOME`
+   is **not** screenplay-formatted; the Outline shows only `#` headings.
+2. (Notes / Scene are prose foundations in the mode registry; if exposed they
+   behave like freeform prose, not screenplay.)
+
+### Keyboard test
+* **Ctrl/Cmd+K** opens Logos (it is *not* repurposed for cycling/uppercase).
+* **Tab** on an empty Screenplay line opens the autocomplete popup; **Shift+Tab**
+  on a heading reduces its section depth; Tab never moves focus out of the editor.
+* **Cmd/Ctrl+B/I/U** wrap the selection in Fountain emphasis markers.
 
 ---
 

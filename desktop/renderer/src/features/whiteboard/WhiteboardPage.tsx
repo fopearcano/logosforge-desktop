@@ -1,13 +1,16 @@
 /** Composes the whiteboard: writing-mode selector + load/save + editor + Logos. */
 
 import type { Editor } from '@tiptap/react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { deriveOutline } from '../outline/deriveOutline';
+import type { OutlineItem } from '../outline/types';
 import { LogosFloatingBox } from '../logos/LogosFloatingBox';
 import { useWritingModes } from '../writingModes/useWritingModes';
 import { WritingModeSelector } from '../writingModes/WritingModeSelector';
-import { screenplayLabel } from './screenplay';
-import type { SaveStatus } from './types';
+import type { FountainType } from './fountain';
+import { screenplayLabel } from './fountain';
+import type { SaveStatus, WhiteboardBlock } from './types';
 import { useWhiteboardDocument } from './useWhiteboardDocument';
 import { WhiteboardEditor } from './WhiteboardEditor';
 
@@ -21,20 +24,37 @@ const SAVE_LABEL: Record<SaveStatus, string> = {
 interface Props {
   baseUrl: string;
   ready: boolean;
-  onSaved?: () => void;
+  onOutlineChange?: (items: OutlineItem[]) => void;
 }
 
-export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
+export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
   const { doc, loading, loadError, saveStatus, onChangeBlocks, setMode } = useWhiteboardDocument({
     baseUrl,
     ready,
-    onSaved,
   });
   const { modes, defaultMode } = useWritingModes({ baseUrl, ready });
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [spElement, setSpElement] = useState<string | null>(null);
+  const [element, setElement] = useState<FountainType | null>(null);
 
-  const isScreenplay = doc?.mode === 'screenplay';
+  const onOutlineRef = useRef(onOutlineChange);
+  onOutlineRef.current = onOutlineChange;
+
+  const mode = doc?.mode ?? defaultMode;
+  const isScreenplay = mode === 'screenplay';
+
+  // Autosave + recompute the (client-derived) outline on every edit.
+  const handleBlocks = useCallback(
+    (blocks: WhiteboardBlock[]) => {
+      onChangeBlocks(blocks);
+      onOutlineRef.current?.(deriveOutline(blocks, doc?.mode ?? 'novel'));
+    },
+    [onChangeBlocks, doc?.mode],
+  );
+
+  // Re-derive the outline whenever the document (or its mode) loads/changes.
+  useEffect(() => {
+    if (doc) onOutlineRef.current?.(deriveOutline(doc.blocks, doc.mode));
+  }, [doc]);
 
   return (
     <main className="whiteboard">
@@ -42,13 +62,13 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
         <div className="wb-statusline-left">
           <WritingModeSelector
             modes={modes}
-            value={doc?.mode ?? defaultMode}
+            value={mode}
             onChange={setMode}
             disabled={!doc}
           />
           {isScreenplay && (
-            <span className="sp-element" title="Screenplay element — press Tab to cycle">
-              {screenplayLabel(spElement)}
+            <span className="sp-element" title="Inferred screenplay element">
+              {screenplayLabel(element)}
             </span>
           )}
         </div>
@@ -60,9 +80,9 @@ export function WhiteboardPage({ baseUrl, ready, onSaved }: Props) {
             key={doc.id}
             initialBlocks={doc.blocks}
             mode={doc.mode}
-            onChangeBlocks={onChangeBlocks}
+            onChangeBlocks={handleBlocks}
             onEditorReady={setEditor}
-            onElementChange={setSpElement}
+            onElementChange={setElement}
           />
         ) : !ready ? (
           <p className="wb-hint">Waiting for backend…</p>
