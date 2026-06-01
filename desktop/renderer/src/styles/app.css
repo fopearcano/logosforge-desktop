@@ -1,0 +1,102 @@
+:root {
+  --bg: #0e0f13;
+  --panel: #15171d;
+  --border: #262a33;
+  --text: #e6e8ee;
+  --muted: #8b90a0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.whiteboard {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  padding: 32px;
+}
+
+.sheet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(820px, 100%);
+  min-height: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.placeholder-hint {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.statusbar .status {
+  display: flex;
+  align-items: center;
+}
+
+.statusbar .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+}
+
+.statusbar .spacer {
+  flex: 1;
+}
+
+.statusbar .version {
+  font-variant-numeric: tabular-nums;
+}

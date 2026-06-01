@@ -1,0 +1,32 @@
+{
+  "name": "logosforge-whiteboard-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LogosForge Whiteboard — Electron + React + TypeScript desktop shell",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k -n vite,electron -c blue,green \"npm:dev:renderer\" \"npm:dev:electron\"",
+    "dev:renderer": "vite renderer",
+    "dev:electron": "npm run build:electron && wait-on tcp:127.0.0.1:5173 && electron .",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:renderer": "vite build renderer",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "preview": "npm run build && electron . --prod",
+    "typecheck": "tsc -p tsconfig.electron.json --noEmit && tsc -p renderer/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.0.1",
+    "electron": "^31.3.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2",
+    "wait-on": "^8.0.1"
+  }
+}
