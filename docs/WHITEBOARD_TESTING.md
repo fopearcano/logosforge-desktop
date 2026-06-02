@@ -186,15 +186,18 @@ backend isn't running it tells you how to start it.
 ## Focused regression tests
 
 ### Layout test
-1. Launch the app (`npm run dev`).
-2. ✅ The **writing surface fills most of the main panel** — no tiny centered
-   card/square floating in empty background.
-3. ✅ Text flows naturally on the sheet: a readable centered column on a
-   full-panel paper surface; clicking anywhere on the sheet starts writing.
-4. ✅ **Screenplay** stays readable on the large surface (screenplay-safe column;
-   clear scene-heading / character / dialogue / parenthetical formatting).
-5. ✅ **Novel / Notes** use a broad, comfortable prose column on the full sheet.
-6. ✅ Outline hide/show still works and the sheet re-centers when it is hidden.
+1. Launch the app (`npm run dev`) with an empty document.
+2. ✅ **No placeholder text** ("Describe the page…" etc.) — an empty doc shows
+   only the caret when focused.
+3. ✅ The **writing surface fills the main panel** — no tiny centered card.
+4. ✅ Typing starts at the **top-left writing margin** (comfortable page padding),
+   not vertically or horizontally centered. Click anywhere on the sheet to write.
+5. ✅ **Screenplay**: `INT. HOME - DAY` appears at the screenplay left margin
+   (not centered); Action wraps at the left margin; Character / Dialogue /
+   Parenthetical use screenplay indentation; only explicitly-centered text centers.
+6. ✅ **Novel / Notes**: prose begins at the normal left margin, broad column, no
+   screenplay indentation.
+7. ✅ Outline hide/show still works; the sheet reflows when it is hidden.
 
 ### Persistence test
 1. `npm run dev`; wait for **Backend: Connected**.

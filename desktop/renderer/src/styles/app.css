@@ -282,13 +282,15 @@ body {
   color: var(--muted);
 }
 
-/* The writing surface fills the whole main panel (it IS the sheet, not a card). */
+/* The writing surface fills the whole main panel (it IS the sheet, not a card)
+   and aligns the text column to the LEFT writing margin (never centered). */
 .wb-surface {
   display: flex;
   flex: 1;
-  justify-content: center;
+  justify-content: flex-start;
   overflow-y: auto;
   background: var(--paper);
+  padding: 0 clamp(24px, 5vw, 80px);
 }
 
 .wb-hint {
@@ -301,12 +303,12 @@ body {
   color: var(--error);
 }
 
-/* The editable text column: centered within the full-panel surface, sized per
-   mode (--measure). No card border/shadow — it sits ON the sheet. */
+/* The editable text column: left-aligned at the writing margin, sized per mode
+   (--measure). No card border/shadow — it sits ON the sheet; text starts top-left. */
 .wb-editor {
   width: 100%;
   max-width: var(--measure, 48rem);
-  padding: 6vh clamp(24px, 5vw, 56px) 40vh;
+  padding: 5vh 0 40vh;
   background: transparent;
   color: var(--ink);
   caret-color: var(--accent);
@@ -351,14 +353,7 @@ body {
   font-weight: 650;
 }
 
-.wb-editor p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  color: var(--paper-muted);
-  opacity: 0.8;
-  pointer-events: none;
-}
+/* Empty document shows only the caret — no placeholder text. */
 
 /* Screenplay element formatting — inferred (Fountain) via decorations,
    scoped to Screenplay mode; `ch` units approximate screenplay indents. */

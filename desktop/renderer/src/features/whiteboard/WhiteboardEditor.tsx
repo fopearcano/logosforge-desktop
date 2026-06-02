@@ -6,14 +6,12 @@
  * plain paragraphs/headings. Content maps 1:1 to the backend's `blocks` contract.
  */
 
-import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useRef, useState } from 'react';
 
 import type { FountainType } from './fountain';
 import { FountainEditing, fountainKey, currentFountainType } from './fountainExtension';
-import { modeBehavior } from './modes';
 import { ScreenplayAutocomplete } from './ScreenplayAutocomplete';
 import type { WhiteboardBlock } from './types';
 
@@ -101,7 +99,6 @@ export function WhiteboardEditor({
         hardBreak: false,
       }),
       FountainEditing.configure({ onAutocomplete: (ctx) => openAcRef.current(ctx) }),
-      Placeholder.configure({ placeholder: modeBehavior(mode).placeholder }),
     ],
     content: blocksToDoc(initialBlocks),
     autofocus: 'end',
