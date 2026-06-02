@@ -130,7 +130,7 @@ export function WhiteboardEditor({
 
   return (
     <>
-      <EditorContent editor={editor} />
+      <EditorContent editor={editor} className="wb-content" />
       <ScreenplayAutocomplete
         open={ac.open}
         left={ac.left}

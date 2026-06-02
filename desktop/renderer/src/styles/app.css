@@ -288,9 +288,10 @@ body {
   display: flex;
   flex: 1;
   justify-content: flex-start;
+  align-items: flex-start;
   overflow-y: auto;
   background: var(--paper);
-  padding: 0 clamp(24px, 5vw, 80px);
+  padding: clamp(24px, 5vh, 56px) clamp(24px, 5vw, 80px) 40vh;
 }
 
 .wb-hint {
@@ -303,12 +304,17 @@ body {
   color: var(--error);
 }
 
-/* The editable text column: left-aligned at the writing margin, sized per mode
-   (--measure). No card border/shadow — it sits ON the sheet; text starts top-left. */
-.wb-editor {
+/* The EditorContent wrapper IS the text column: anchored top-left in the
+   surface, width capped per mode (--measure). The editable body sits inside. */
+.wb-content {
   width: 100%;
   max-width: var(--measure, 48rem);
-  padding: 5vh 0 40vh;
+}
+
+/* The editable body fills the column, left-aligned (no centering, no card). */
+.wb-editor {
+  width: 100%;
+  text-align: left;
   background: transparent;
   color: var(--ink);
   caret-color: var(--accent);
