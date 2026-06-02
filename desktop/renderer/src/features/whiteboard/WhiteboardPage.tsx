@@ -1,7 +1,7 @@
 /** Composes the whiteboard: writing-mode selector + load/save + editor + Logos. */
 
 import type { Editor } from '@tiptap/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { deriveOutline } from '../outline/deriveOutline';
 import type { OutlineItem } from '../outline/types';
@@ -10,6 +10,7 @@ import { useWritingModes } from '../writingModes/useWritingModes';
 import { WritingModeSelector } from '../writingModes/WritingModeSelector';
 import type { FountainType } from './fountain';
 import { screenplayLabel } from './fountain';
+import { modeBehavior } from './modes';
 import type { SaveStatus, WhiteboardBlock } from './types';
 import { useWhiteboardDocument } from './useWhiteboardDocument';
 import { WhiteboardEditor } from './WhiteboardEditor';
@@ -74,7 +75,17 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
         </div>
         <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
       </div>
-      <div className="wb-surface">
+      <div
+        className="wb-surface"
+        style={{ '--measure': modeBehavior(mode).measure } as CSSProperties}
+        onMouseDown={(e) => {
+          // Click anywhere on the (full-panel) sheet to start writing.
+          if (e.target === e.currentTarget) {
+            e.preventDefault();
+            editor?.chain().focus('end').run();
+          }
+        }}
+      >
         {doc ? (
           <WhiteboardEditor
             key={doc.id}

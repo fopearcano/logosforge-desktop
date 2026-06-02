@@ -3,8 +3,8 @@
  *
  * Each mode defines how the editor behaves/looks. Screenplay uses Fountain
  * inference + a monospaced surface; the other modes are prose-first with a
- * Markdown-heading outline. This gives clean, differentiated foundations
- * (Screenplay vs prose) without making every mode behave like Screenplay.
+ * Markdown-heading outline. The `measure` is the readable text-column width
+ * inside the full-panel writing surface (mode-aware layout — not one-size CSS).
  *
  * Note: the backend's Writing Modes are the five narrative engines
  * (novel/screenplay/graphic_novel/stage_script/series). "Notes"/"Scene" are
@@ -22,11 +22,13 @@ export interface ModeBehavior {
   /** Outline extraction strategy. */
   outline: 'fountain' | 'headings';
   placeholder: string;
+  /** Readable text-column width within the (full-panel) writing surface. */
+  measure: string;
   /** Hint for the Logos assistant context (used later). */
   assistantContext: string;
 }
 
-function prose(id: string, displayName: string, placeholder: string): ModeBehavior {
+function prose(id: string, displayName: string, placeholder: string, measure = '48rem'): ModeBehavior {
   return {
     id,
     displayName,
@@ -34,6 +36,7 @@ function prose(id: string, displayName: string, placeholder: string): ModeBehavi
     fountain: false,
     outline: 'headings',
     placeholder,
+    measure,
     assistantContext: 'prose',
   };
 }
@@ -46,6 +49,7 @@ const REGISTRY: Record<string, ModeBehavior> = {
     fountain: true,
     outline: 'fountain',
     placeholder: 'INT. / EXT. — start your scene…',
+    measure: '63ch', // screenplay-safe text column (Courier)
     assistantContext: 'screenplay',
   },
   novel: prose('novel', 'Novel', 'Start writing your novel…'),
@@ -59,12 +63,13 @@ const REGISTRY: Record<string, ModeBehavior> = {
     fountain: false,
     outline: 'headings',
     placeholder: 'Start your scene…',
+    measure: '60ch',
     assistantContext: 'stage',
   },
   series: prose('series', 'Series', 'Start your episode…'),
   // Forward-compat prose foundations (not currently exposed as writing modes).
-  notes: prose('notes', 'Notes', 'Jot down a note…'),
-  scene: prose('scene', 'Scene', 'Draft this scene…'),
+  notes: prose('notes', 'Notes', 'Jot down a note…', '56rem'),
+  scene: prose('scene', 'Scene', 'Draft this scene…', '50rem'),
 };
 
 const DEFAULT = prose('novel', 'Novel', 'Start writing…');

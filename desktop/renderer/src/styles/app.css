@@ -282,12 +282,13 @@ body {
   color: var(--muted);
 }
 
+/* The writing surface fills the whole main panel (it IS the sheet, not a card). */
 .wb-surface {
   display: flex;
   flex: 1;
   justify-content: center;
   overflow-y: auto;
-  padding: 32px 24px 30vh;
+  background: var(--paper);
 }
 
 .wb-hint {
@@ -300,17 +301,15 @@ body {
   color: var(--error);
 }
 
-/* The writing page — large, comfortable, theme-aware. */
+/* The editable text column: centered within the full-panel surface, sized per
+   mode (--measure). No card border/shadow — it sits ON the sheet. */
 .wb-editor {
-  width: min(54rem, 100%);
-  min-height: 64vh;
-  padding: 48px clamp(28px, 8%, 84px);
-  background: var(--paper);
+  width: 100%;
+  max-width: var(--measure, 48rem);
+  padding: 6vh clamp(24px, 5vw, 56px) 40vh;
+  background: transparent;
   color: var(--ink);
   caret-color: var(--accent);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  box-shadow: var(--page-shadow);
   outline: none;
   font-family: "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif;
   font-size: 18px;

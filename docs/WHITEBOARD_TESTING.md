@@ -185,6 +185,17 @@ backend isn't running it tells you how to start it.
 
 ## Focused regression tests
 
+### Layout test
+1. Launch the app (`npm run dev`).
+2. ✅ The **writing surface fills most of the main panel** — no tiny centered
+   card/square floating in empty background.
+3. ✅ Text flows naturally on the sheet: a readable centered column on a
+   full-panel paper surface; clicking anywhere on the sheet starts writing.
+4. ✅ **Screenplay** stays readable on the large surface (screenplay-safe column;
+   clear scene-heading / character / dialogue / parenthetical formatting).
+5. ✅ **Novel / Notes** use a broad, comfortable prose column on the full sheet.
+6. ✅ Outline hide/show still works and the sheet re-centers when it is hidden.
+
 ### Persistence test
 1. `npm run dev`; wait for **Backend: Connected**.
 2. Type some text; wait for **Saved** in the status line.
