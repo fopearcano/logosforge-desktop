@@ -7,7 +7,8 @@
  * Pure (no editor/DOM imports) so it is unit-testable.
  */
 
-import { classify, type FountainBlock } from '../whiteboard/fountain';
+import type { FountainBlock } from '../screenplay/fountainTypes';
+import { classify } from '../screenplay/screenplayClassifier';
 import { modeBehavior } from '../whiteboard/modes';
 import type { WhiteboardBlock } from '../whiteboard/types';
 import type { OutlineItem } from './types';

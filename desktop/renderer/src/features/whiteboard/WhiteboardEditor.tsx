@@ -2,17 +2,22 @@
  * The TipTap (ProseMirror) writing surface.
  *
  * Per-mode behavior comes from the mode registry (./modes): Screenplay applies
- * Fountain inference + screenplay keyboard (./fountainExtension); prose modes are
- * plain paragraphs/headings. Content maps 1:1 to the backend's `blocks` contract.
+ * the Fountain engine (../screenplay) — inference formatting + screenplay
+ * keyboard; prose modes are plain paragraphs/headings. Content maps 1:1 to the
+ * backend's `blocks` contract.
  */
 
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useRef, useState } from 'react';
 
-import type { FountainType } from './fountain';
-import { FountainEditing, fountainKey, currentFountainType } from './fountainExtension';
-import { ScreenplayAutocomplete } from './ScreenplayAutocomplete';
+import type { FountainType } from '../screenplay/fountainTypes';
+import { ScreenplayAutocomplete } from '../screenplay/ScreenplayAutocomplete';
+import {
+  ScreenplayEditing,
+  currentFountainType,
+  fountainKey,
+} from '../screenplay/screenplayExtension';
 import type { WhiteboardBlock } from './types';
 
 // --- block <-> ProseMirror document mapping --------------------------------
@@ -98,7 +103,7 @@ export function WhiteboardEditor({
         listItem: false,
         hardBreak: false,
       }),
-      FountainEditing.configure({ onAutocomplete: (ctx) => openAcRef.current(ctx) }),
+      ScreenplayEditing.configure({ onAutocomplete: (ctx) => openAcRef.current(ctx) }),
     ],
     content: blocksToDoc(initialBlocks),
     autofocus: 'end',

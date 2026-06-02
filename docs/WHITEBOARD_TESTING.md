@@ -122,16 +122,20 @@ The suite covers `/health`, `/api/version`, `/api/whiteboard` (GET + PUT),
 and the `/ws/events` WebSocket. `tests/test_smoke.py` is a single end-to-end
 "is the whole API alive?" check.
 
-### Frontend (type safety)
+### Frontend (type safety + screenplay parser tests)
 
-There is no UI test framework yet (no Playwright/Vitest), so `npm test` runs the
-type checker — the available static check:
+There is no UI test framework yet (no Playwright/Vitest), but the screenplay
+engine is pure and unit-tested:
 
 ```bash
 cd desktop
-npm test          # == npm run typecheck (electron + renderer)
-npm run build     # verify the renderer bundles and electron compiles
+npm test               # typecheck (electron + renderer) + screenplay parser tests
+npm run test:screenplay # just the Fountain parser/classifier tests
+npm run build          # verify the renderer bundles and electron compiles
 ```
+
+`test:screenplay` bundles `renderer/src/features/screenplay/screenplayTests.ts`
+with esbuild and runs it in Node (exits non-zero on any failure).
 
 ### Live API smoke (from the app's perspective)
 
@@ -259,7 +263,24 @@ Expected: the **Outline** shows **Act One** (section), **Opening image**
 * **Ctrl/Cmd+K** opens Logos (it is *not* repurposed for cycling/uppercase).
 * **Tab** on an empty Screenplay line opens the autocomplete popup; **Shift+Tab**
   on a heading reduces its section depth; Tab never moves focus out of the editor.
-* **Cmd/Ctrl+B/I/U** wrap the selection in Fountain emphasis markers.
+* **Cmd/Ctrl+B/I/U** wrap the selection in Fountain emphasis markers
+  (`**bold**` / `*italic*` / `_underline_`).
+
+### Screenplay parser test (automated)
+
+The Fountain engine lives in `renderer/src/features/screenplay/` (parser,
+classifier, formatting, keyboard, autocomplete) and is unit-tested independently
+of the UI:
+
+```bash
+cd desktop && npm run test:screenplay
+```
+
+It covers scene headings (`INT.`/`EXT.`/`INT./EXT.`/`I/E.`/`EST.` + forced `.`),
+action, character→dialogue, parentheticals, transitions (`TO:` + forced `>`),
+centered (`> … <`), sections (`#`), synopses (`=`), notes (`[[ ]]`), page breaks
+(`===`), and inline emphasis (`***bold italic***` / `**bold**` / `*italic*` /
+`_underline_`). Emphasis renders with the raw markers kept but dimmed.
 
 ---
 

@@ -404,6 +404,25 @@ body {
   color: var(--paper-muted);
 }
 
+/* Inline Fountain emphasis — the inner text is styled; the raw markers stay
+   visible but dimmed (sp-emph-marker). */
+.wb-editor[data-writing-mode='screenplay'] .sp-bold {
+  font-weight: 700;
+}
+.wb-editor[data-writing-mode='screenplay'] .sp-italic {
+  font-style: italic;
+}
+.wb-editor[data-writing-mode='screenplay'] .sp-bold-italic {
+  font-weight: 700;
+  font-style: italic;
+}
+.wb-editor[data-writing-mode='screenplay'] .sp-underline {
+  text-decoration: underline;
+}
+.wb-editor[data-writing-mode='screenplay'] .sp-emph-marker {
+  opacity: 0.35;
+}
+
 /* Screenplay autocomplete popup. */
 .sp-autocomplete {
   position: fixed;

@@ -1,8 +1,7 @@
 /**
- * Screenplay autocomplete popup (foundation). Opens at the caret on Tab in
- * Screenplay mode; keyboard-navigable; selecting inserts the text.
- * Suggestions = static slugs/transitions + character names / scene headings /
- * transitions extracted from the current document.
+ * Screenplay autocomplete popup. Opens at the caret on Tab in Screenplay mode;
+ * keyboard-navigable; selecting inserts the text. (UI glue around the pure
+ * suggestion logic in ./screenplayAutocomplete.)
  */
 
 import { useEffect, useRef, useState } from 'react';
