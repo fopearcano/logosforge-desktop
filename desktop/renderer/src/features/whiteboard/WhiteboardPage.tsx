@@ -1,17 +1,25 @@
-/** Composes the whiteboard: writing-mode selector + load/save + editor + Logos. */
+/** Composes the whiteboard: writing-mode selector + load/save + editor + Logos,
+ *  plus the Screenplay Preview / Settings / scale / export toolbar. */
 
 import type { Editor } from '@tiptap/react';
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 import { deriveOutline } from '../outline/deriveOutline';
 import type { OutlineItem } from '../outline/types';
 import { LogosFloatingBox } from '../logos/LogosFloatingBox';
+import { PreviewView } from '../screenplay/PreviewView';
+import { toFountainBlocks } from '../screenplay/screenplayExport';
+import type { FountainType } from '../screenplay/fountainTypes';
+import { approxPageCount } from '../screenplay/screenplayPageCount';
+import { screenplayLabel } from '../screenplay/screenplayClassifier';
 import { useWritingModes } from '../writingModes/useWritingModes';
 import { WritingModeSelector } from '../writingModes/WritingModeSelector';
-import type { FountainType } from '../screenplay/fountainTypes';
-import { screenplayLabel } from '../screenplay/screenplayClassifier';
+import { surfaceDataAttrs } from './documentSettings';
 import { modeBehavior } from './modes';
+import { ScreenplayToolbar } from './ScreenplayToolbar';
 import type { SaveStatus, WhiteboardBlock } from './types';
+import { useDocumentSettings } from './useDocumentSettings';
+import { useEditorScale } from './useEditorScale';
 import { useWhiteboardDocument } from './useWhiteboardDocument';
 import { WhiteboardEditor } from './WhiteboardEditor';
 
@@ -36,37 +44,102 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
   const { modes, defaultMode } = useWritingModes({ baseUrl, ready });
   const [editor, setEditor] = useState<Editor | null>(null);
   const [element, setElement] = useState<FountainType | null>(null);
+  const [preview, setPreview] = useState(false);
+  const [liveBlocks, setLiveBlocks] = useState<WhiteboardBlock[]>([]);
+
+  const settingsApi = useDocumentSettings();
+  const { scale, apply: applyScale } = useEditorScale();
 
   const onOutlineRef = useRef(onOutlineChange);
   onOutlineRef.current = onOutlineChange;
+  const lastDocIdRef = useRef<string | null>(null);
+  const previewRef = useRef(preview);
+  previewRef.current = preview;
 
   const mode = doc?.mode ?? defaultMode;
   const isScreenplay = mode === 'screenplay';
+  const showPreview = isScreenplay && preview;
 
-  // Autosave + recompute the (client-derived) outline on every edit.
+  // Autosave + recompute the (client-derived) outline + live snapshot on edit.
   const handleBlocks = useCallback(
     (blocks: WhiteboardBlock[]) => {
+      setLiveBlocks(blocks);
       onChangeBlocks(blocks);
       onOutlineRef.current?.(deriveOutline(blocks, doc?.mode ?? 'novel'));
     },
     [onChangeBlocks, doc?.mode],
   );
 
-  // Re-derive the outline whenever the document (or its mode) loads/changes.
+  // Re-derive the outline whenever the document loads/changes; reset the live
+  // snapshot only when a different document loads.
   useEffect(() => {
-    if (doc) onOutlineRef.current?.(deriveOutline(doc.blocks, doc.mode));
+    if (!doc) return;
+    onOutlineRef.current?.(deriveOutline(doc.blocks, doc.mode));
+    if (doc.id !== lastDocIdRef.current) {
+      lastDocIdRef.current = doc.id;
+      setLiveBlocks(doc.blocks);
+    }
   }, [doc]);
+
+  // Leaving Screenplay mode exits Preview.
+  useEffect(() => {
+    if (!isScreenplay) setPreview(false);
+  }, [isScreenplay]);
+
+  // View scale (Ctrl/Cmd +/-/0), Preview toggle (Ctrl/Cmd+Shift+E), Esc exits.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && !e.altKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault();
+          applyScale('bigger');
+          return;
+        }
+        if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          applyScale('smaller');
+          return;
+        }
+        if (e.key === '0') {
+          e.preventDefault();
+          applyScale('actual');
+          return;
+        }
+      }
+      if (isScreenplay && mod && e.shiftKey && !e.altKey && (e.key === 'E' || e.key === 'e')) {
+        e.preventDefault();
+        setPreview((p) => !p);
+        return;
+      }
+      if (e.key === 'Escape' && previewRef.current) {
+        const ae = document.activeElement as HTMLElement | null;
+        if (ae && (ae.closest('.wb-popover') || /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))) return;
+        setPreview(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isScreenplay, applyScale]);
+
+  const approxPages = useMemo(
+    () => (isScreenplay ? approxPageCount(toFountainBlocks(liveBlocks)) : 0),
+    [isScreenplay, liveBlocks],
+  );
+
+  const surfaceStyle = {
+    '--measure': modeBehavior(mode).measure,
+    '--wb-scale': String(scale),
+  } as CSSProperties;
+  const surfaceAttrs = isScreenplay
+    ? { 'data-screenplay': '', ...surfaceDataAttrs(settingsApi.settings) }
+    : {};
 
   return (
     <main className="whiteboard">
       <div className="wb-statusline">
         <div className="wb-statusline-left">
-          <WritingModeSelector
-            modes={modes}
-            value={mode}
-            onChange={setMode}
-            disabled={!doc}
-          />
+          <WritingModeSelector modes={modes} value={mode} onChange={setMode} disabled={!doc} />
           {isScreenplay && (
             <span className="sp-element" title="Inferred screenplay element">
               {screenplayLabel(element)}
@@ -75,26 +148,44 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
         </div>
         <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
       </div>
+
+      {isScreenplay && (
+        <ScreenplayToolbar
+          editor={editor}
+          blocks={liveBlocks}
+          settingsApi={settingsApi}
+          preview={preview}
+          onTogglePreview={() => setPreview((p) => !p)}
+          scale={scale}
+          onScale={applyScale}
+          approxPages={approxPages}
+        />
+      )}
+
       <div
-        className="wb-surface"
-        style={{ '--measure': modeBehavior(mode).measure } as CSSProperties}
+        className={`wb-surface${showPreview ? ' is-preview' : ''}`}
+        style={surfaceStyle}
+        {...surfaceAttrs}
         onMouseDown={(e) => {
           // Click anywhere on the (full-panel) sheet to start writing.
-          if (e.target === e.currentTarget) {
+          if (!showPreview && e.target === e.currentTarget) {
             e.preventDefault();
             editor?.chain().focus('end').run();
           }
         }}
       >
         {doc ? (
-          <WhiteboardEditor
-            key={doc.id}
-            initialBlocks={doc.blocks}
-            mode={doc.mode}
-            onChangeBlocks={handleBlocks}
-            onEditorReady={setEditor}
-            onElementChange={setElement}
-          />
+          <>
+            <WhiteboardEditor
+              key={doc.id}
+              initialBlocks={doc.blocks}
+              mode={doc.mode}
+              onChangeBlocks={handleBlocks}
+              onEditorReady={setEditor}
+              onElementChange={setElement}
+            />
+            {showPreview && <PreviewView blocks={liveBlocks} settings={settingsApi.settings} />}
+          </>
         ) : !ready ? (
           <p className="wb-hint">Waiting for backend…</p>
         ) : loading ? (

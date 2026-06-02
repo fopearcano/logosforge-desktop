@@ -4,12 +4,17 @@
  */
 
 import { deriveOutline } from '../outline/deriveOutline';
+import { DEFAULT_SETTINGS, surfaceDataAttrs } from '../whiteboard/documentSettings';
+import { nextScale, scaleToPct } from '../whiteboard/editorScale';
 import { parseEmphasis } from './fountainParser';
 import type { FountainBlock } from './fountainTypes';
 import { computeSuggestions, filterSuggestions } from './screenplayAutocomplete';
 import { detectBoneyard } from './screenplayBoneyard';
 import { classify } from './screenplayClassifier';
-import { stripForExport } from './screenplayExport';
+import { cycleCase, toggleCenter } from './screenplayCommands';
+import { blocksToFountainText, stripForExport } from './screenplayExport';
+import { approxPageCount } from './screenplayPageCount';
+import { buildPreview, previewSegments, previewToPlainText } from './screenplayPreview';
 import { sectionShiftTabLevel, sectionTabLevel } from './screenplaySections';
 import { parseTitlePage } from './screenplayTitlePage';
 
@@ -166,6 +171,114 @@ check(
   check('outline note label strips brackets', ol[0]?.label === 'Need stronger hook');
 }
 eqTypes('== is synopsis, not page break', lines('=='), ['synopsis']);
+
+// 22. Preview hides notes + omitted text, keeps the surrounding action/dialogue
+{
+  const pv = buildPreview(
+    lines(
+      'INT. HOUSE - DAY',
+      'She reads a [[remember the key]] letter.',
+      '/* cut this scene */',
+      'JOHN',
+      'Hello.',
+    ),
+    DEFAULT_SETTINGS,
+  );
+  const body = pv.lines.map((l) => l.text).join('\n');
+  check('preview hides inline note', !body.includes('[['));
+  check('preview hides boneyard', !body.includes('/*') && !body.includes('cut this scene'));
+  check('preview keeps action text', body.includes('She reads a') && body.includes('letter.'));
+  check('preview keeps dialogue', pv.lines.some((l) => l.type === 'dialogue' && l.text === 'Hello.'));
+}
+
+// 23. Preview excludes whole note lines + multi-block boneyard
+{
+  const pv = buildPreview(lines('[[just a note]]', 'Action here.', '/*', 'omitted', '*/'), DEFAULT_SETTINGS);
+  check('preview drops note line', !pv.lines.some((l) => l.type === 'note'));
+  check('preview drops boneyard block', !pv.lines.some((l) => l.text.includes('omitted')));
+}
+
+// 24. Preview handles the title page
+{
+  const pv = buildPreview(
+    lines('Title: My Movie', 'Author: Me', '', 'INT. HOUSE - DAY', 'Action.'),
+    DEFAULT_SETTINGS,
+  );
+  check('preview parses title field', pv.titlePage.title === 'My Movie');
+  check('preview title not in body', !pv.lines.some((l) => l.text.includes('My Movie')));
+  check('preview body starts at scene', pv.lines[0]?.type === 'scene_heading');
+}
+
+// 25. Preview include-outline setting
+{
+  const blocks = lines('# Act One', '= a synopsis', 'INT. HOUSE - DAY');
+  const without = buildPreview(blocks, DEFAULT_SETTINGS);
+  const withOutline = buildPreview(blocks, { ...DEFAULT_SETTINGS, includeOutline: true });
+  check(
+    'preview excludes outline by default',
+    !without.lines.some((l) => l.type === 'section' || l.type === 'synopsis'),
+  );
+  check(
+    'preview includes outline when enabled',
+    withOutline.lines.some((l) => l.type === 'section') &&
+      withOutline.lines.some((l) => l.type === 'synopsis'),
+  );
+}
+
+// 26. Document settings → scene-heading style data attribute
+check('settings attr default bold', surfaceDataAttrs(DEFAULT_SETTINGS)['data-scene-style'] === 'bold');
+check(
+  'settings attr underline',
+  surfaceDataAttrs({ ...DEFAULT_SETTINGS, sceneHeadingStyle: 'underline' })['data-scene-style'] === 'underline',
+);
+check(
+  'settings attr invisibles off',
+  surfaceDataAttrs({ ...DEFAULT_SETTINGS, showInvisibles: false })['data-invisibles'] === 'off',
+);
+
+// 27. View scale state
+check('scale bigger', nextScale(1, 'bigger') === 1.1);
+check('scale smaller', nextScale(1, 'smaller') === 0.9);
+check('scale actual', nextScale(1.4, 'actual') === 1);
+check('scale clamps max', nextScale(1.8, 'bigger') === 1.8);
+check('scale clamps min', nextScale(0.7, 'smaller') === 0.7);
+check('scale pct', scaleToPct(1.1) === 110);
+
+// 28. Capitalization cycle (lower → UPPER → Sentence → lower)
+check('case lower->UPPER', cycleCase('hello world') === 'HELLO WORLD');
+check('case UPPER->Sentence', cycleCase('HELLO WORLD') === 'Hello world');
+check('case mixed->lower', cycleCase('Hello World') === 'hello world');
+
+// 29. Center command toggle
+check('center wraps', toggleCenter('THE END') === '> THE END <');
+check('center unwraps', toggleCenter('> THE END <') === 'THE END');
+
+// 30. Export plain text preserves the raw Fountain (markers/notes/boneyard kept)
+{
+  const wb = [
+    { id: 'a', type: 'heading', text: 'Act One', level: 1 },
+    { id: 'b', type: 'paragraph', text: 'INT. HOUSE - DAY' },
+    { id: 'c', type: 'paragraph', text: 'She reads a [[note]] and /* cut */ stays.' },
+  ];
+  const text = blocksToFountainText(wb);
+  check('export writes section as #', text.includes('# Act One'));
+  check('export preserves scene', text.includes('INT. HOUSE - DAY'));
+  check('export preserves raw note + boneyard', text.includes('[[note]]') && text.includes('/* cut */'));
+}
+
+// 31. Preview plain-text copy strips markers; page count approximates
+{
+  const pv = buildPreview(lines('INT. HOUSE - DAY', 'A **bold** move.'), DEFAULT_SETTINGS);
+  const txt = previewToPlainText(pv);
+  check('preview copy strips markers', txt.includes('A bold move.') && !txt.includes('**'));
+  check('preview segments strip markers', previewSegments('a **b** c').map((s) => s.text).join('') === 'a b c');
+  const few = approxPageCount(lines('INT. HOUSE - DAY', 'Short action.'));
+  const many = approxPageCount(
+    Array.from({ length: 200 }, () => line('A reasonably long line of screenplay action text here.')),
+  );
+  check('page count empty is 0', approxPageCount([]) === 0);
+  check('page count grows with content', many > few && few >= 1);
+}
 
 // --- report ---
 console.log(`Screenplay parser tests: ${passed} passed, ${failures.length} failed`);

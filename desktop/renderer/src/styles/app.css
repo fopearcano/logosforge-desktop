@@ -16,6 +16,8 @@
   --paper-muted: #a8a497;
   --paper-selection: rgba(59, 111, 212, 0.14);
   --page-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 10px 30px rgba(0, 0, 0, 0.06);
+  /* In-app editor view scale (Bigger/Smaller/Actual) — not browser zoom. */
+  --wb-scale: 1;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -349,7 +351,7 @@ body {
   caret-color: var(--accent);
   outline: none;
   font-family: "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif;
-  font-size: 18px;
+  font-size: calc(18px * var(--wb-scale));
   line-height: 1.7;
 }
 
@@ -357,7 +359,7 @@ body {
 .wb-editor[data-writing-mode='screenplay'],
 .wb-editor[data-writing-mode='stage_script'] {
   font-family: "Courier Prime", "Courier New", "Courier", ui-monospace, monospace;
-  font-size: 16px;
+  font-size: calc(16px * var(--wb-scale));
   line-height: 1.6;
 }
 
@@ -535,6 +537,291 @@ body {
 .sp-ac-item.is-active,
 .sp-ac-item:hover {
   background: var(--hover);
+}
+
+/* ===================== Screenplay toolbar + Preview ===================== */
+.wb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.wb-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 8px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wb-tool:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.wb-tool.is-active {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.wb-tool-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.wb-scale-pct {
+  min-width: 46px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-spacer {
+  flex: 1;
+}
+
+.wb-pages {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Popover (Settings / Format / Export). */
+.wb-popover {
+  position: relative;
+  display: inline-flex;
+}
+
+.wb-popover-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 45;
+  min-width: 200px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.wb-popover-left {
+  left: 0;
+}
+
+.wb-popover-right {
+  right: 0;
+}
+
+.wb-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.wb-menu-item {
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.wb-menu-item:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.wb-menu-item:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.wb-menu-soon {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* Document Settings form. */
+.wb-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.wb-settings-title {
+  margin: 2px 2px 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.wb-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.wb-field > select {
+  padding: 3px 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.wb-field-check {
+  justify-content: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.wb-field-check input {
+  margin: 0;
+}
+
+/* Preview view — hide the editable body while previewing. */
+.wb-surface.is-preview .wb-content {
+  display: none;
+}
+
+.wb-preview {
+  width: 100%;
+  max-width: var(--measure, 63ch);
+  color: var(--ink);
+  font-family: "Courier Prime", "Courier New", "Courier", ui-monospace, monospace;
+  font-size: calc(16px * var(--wb-scale));
+  line-height: 1.6;
+}
+
+.wb-preview .sp-pv-body p {
+  margin: 0 0 1em;
+}
+
+.wb-preview .sp-pv-empty {
+  color: var(--paper-muted);
+}
+
+.wb-preview .sp-pv-titlepage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  min-height: 55vh;
+  margin-bottom: 2em;
+  padding-bottom: 2em;
+  border-bottom: 1px dashed var(--border);
+  text-align: center;
+}
+
+.wb-preview .sp-pv-title {
+  font-size: 1.5em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.wb-preview .sp-pv-meta {
+  color: var(--paper-muted);
+  font-size: 0.9em;
+}
+
+/* Preview screenplay element layout (mirrors the writing surface). */
+.wb-preview p.sp-scene_heading {
+  text-transform: uppercase;
+}
+.wb-preview p.sp-character {
+  margin: 1.1em 0 0 20ch;
+  text-transform: uppercase;
+}
+.wb-preview p.sp-dialogue {
+  margin: 0 12ch 0 10ch;
+}
+.wb-preview p.sp-parenthetical {
+  margin: 0 16ch;
+  font-style: italic;
+}
+.wb-preview p.sp-transition {
+  margin-top: 1em;
+  text-align: right;
+  text-transform: uppercase;
+}
+.wb-preview p.sp-section {
+  font-weight: 700;
+  color: var(--accent);
+}
+.wb-preview p.sp-synopsis {
+  color: var(--paper-muted);
+  font-style: italic;
+}
+.wb-preview p.sp-centered {
+  text-align: center;
+}
+.wb-preview p.sp-page_break {
+  margin: 1.6em 0;
+  padding-top: 0.4em;
+  border-top: 1px dashed var(--border);
+  text-align: center;
+  font-size: 0.72em;
+  letter-spacing: 0.3em;
+  color: var(--paper-muted);
+}
+
+/* Scene Heading style + blank lines + typeface + invisibles come from Document
+   Settings (data-* on the surface); higher specificity overrides the defaults,
+   for both the writing surface and the Preview. */
+.wb-surface[data-screenplay][data-scene-style='normal'] .sp-scene_heading {
+  font-weight: 400;
+  text-decoration: none;
+}
+.wb-surface[data-screenplay][data-scene-style='bold'] .sp-scene_heading {
+  font-weight: 700;
+  text-decoration: none;
+}
+.wb-surface[data-screenplay][data-scene-style='underline'] .sp-scene_heading {
+  font-weight: 400;
+  text-decoration: underline;
+}
+.wb-surface[data-screenplay][data-scene-style='bold-underline'] .sp-scene_heading {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.wb-surface[data-screenplay][data-scene-blank='1'] .sp-scene_heading {
+  margin-top: 1.5em;
+}
+.wb-surface[data-screenplay][data-scene-blank='2'] .sp-scene_heading {
+  margin-top: 3em;
+}
+.wb-surface[data-screenplay][data-typeface='courier'] .wb-editor,
+.wb-surface[data-screenplay][data-typeface='courier'] .wb-preview {
+  font-family: "Courier New", "Courier", ui-monospace, monospace;
+}
+.wb-surface[data-screenplay][data-typeface='monospace'] .wb-editor,
+.wb-surface[data-screenplay][data-typeface='monospace'] .wb-preview {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+.wb-surface[data-screenplay][data-invisibles='off'] .sp-emph-marker {
+  opacity: 0;
 }
 
 /* ============================ Status bar ============================ */

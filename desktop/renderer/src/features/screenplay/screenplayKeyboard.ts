@@ -16,6 +16,7 @@ import type { Editor } from '@tiptap/react';
 
 import { computeSuggestions } from './screenplayAutocomplete';
 import { classify } from './screenplayClassifier';
+import { cycleCase, toggleCenter } from './screenplayCommands';
 import { docToFountainBlocks } from './screenplayFormatting';
 import { sectionShiftTabLevel, sectionTabLevel } from './screenplaySections';
 
@@ -97,3 +98,25 @@ function wrapPair(editor: Editor, open: string, close: string): boolean {
 export const wrapMarker = (editor: Editor, marker: string) => wrapPair(editor, marker, marker);
 export const wrapNote = (editor: Editor) => wrapPair(editor, '[[', ']]');
 export const wrapOmit = (editor: Editor) => wrapPair(editor, '/*', '*/');
+
+function lineRange(editor: Editor): { from: number; to: number } {
+  const { $from } = editor.state.selection;
+  return { from: $from.start(), to: $from.end() };
+}
+
+/** Format → Capitalization: cycle the selection (or current line) through cases. */
+export function cycleSelectionCase(editor: Editor): boolean {
+  const sel = editor.state.selection;
+  const range = sel.empty ? lineRange(editor) : { from: sel.from, to: sel.to };
+  const text = editor.state.doc.textBetween(range.from, range.to, '');
+  if (text) editor.chain().focus().insertContentAt(range, cycleCase(text)).run();
+  return true;
+}
+
+/** Toggle "> … <" centering on the current line. */
+export function toggleCenterLine(editor: Editor): boolean {
+  const range = lineRange(editor);
+  const text = editor.state.doc.textBetween(range.from, range.to, '');
+  editor.chain().focus().insertContentAt(range, toggleCenter(text)).run();
+  return true;
+}

@@ -18,6 +18,7 @@ import { buildDecorations, docToFountainBlocks } from './screenplayFormatting';
 import {
   handleShiftTab,
   handleTab,
+  toggleCenterLine,
   wrapMarker,
   wrapNote,
   wrapOmit,
@@ -90,6 +91,7 @@ export const ScreenplayEditing = Extension.create<ScreenplayOptions>({
       'Mod-u': () => wrapMarker(this.editor, '_'),
       'Mod-Alt-n': () => wrapNote(this.editor), // Note: [[ … ]] (Cmd/Ctrl+Y avoided — it is redo)
       'Mod-Alt-o': () => wrapOmit(this.editor), // Omit selected text into the boneyard /* … */
+      'Mod-\\': () => toggleCenterLine(this.editor), // Center line: wrap/unwrap > … <
       // Enter is not bound — see screenplayKeyboard.ts. Cmd/Ctrl+K stays free for Logos.
     };
   },

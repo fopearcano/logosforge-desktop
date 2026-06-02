@@ -335,6 +335,63 @@ Type a line containing only `===` → it renders as a **subtle horizontal
 page-break divider** (a faint dashed rule with the `===` shown small and muted).
 The text stays editable; this is an indicator only (no real pagination yet).
 
+### Preview test
+1. In Screenplay mode, write a short scene that includes a **note** on its own
+   line (`[[fix this beat]]`), an **inline note** inside an action line, an
+   **omitted** `/* … */` block, and a title page (`Title:` / `Author:` at the
+   very top).
+2. Click **Preview** in the screenplay toolbar, or press **Ctrl/Cmd+Shift+E**.
+3. ✅ The editor is replaced by a clean, formatted reading view (scene headings,
+   character/dialogue indentation, transitions on the right).
+4. ✅ The **note**, the **inline note**, and the **omitted** text are **hidden**.
+5. ✅ The **title page** renders centered at the top (Title large, then Author…).
+6. ✅ Sections/Synopses are hidden **unless** Document Settings →
+   "Include outline elements in Preview" is enabled.
+7. Press **Esc** (or click **Editing**) to return. The raw Fountain text —
+   including the notes and omitted blocks — is untouched.
+
+> The spec suggested **Shift+Cmd/Ctrl+P** for Preview, but that already toggles
+> **PSYKE**; Preview uses **Ctrl/Cmd+Shift+E** instead (Esc exits).
+
+### Settings test
+1. Open **⚙ Settings** in the screenplay toolbar.
+2. Change **Scene Heading** to **Underline** (or **Bold + Underline**) →
+   ✅ scene headings update immediately, in the writing view *and* in Preview.
+3. Change **Blank lines before Scene** to **Two** → ✅ more space appears above
+   each scene heading.
+4. Toggle **Show invisible Fountain markers** off → ✅ the dimmed `*` / `_`
+   emphasis markers disappear (the bold/italic styling stays).
+5. Change **Typeface** → ✅ the editor font changes (Courier Prime / Courier /
+   monospace).
+6. Settings persist across restarts (stored locally).
+
+### Scale test
+1. Use the toolbar **−** / **percentage** / **+** controls, or the keyboard:
+   **Ctrl/Cmd+=** (Bigger), **Ctrl/Cmd+-** (Smaller), **Ctrl/Cmd+0** (Actual size).
+2. ✅ The editor (and Preview) text/page scales up and down; the percentage
+   indicator reflects the current scale, and it persists across restarts.
+3. ✅ This is the **in-app** editor scale, not browser zoom.
+
+> On macOS the system menu may also bind ⌘+ / ⌘− / ⌘0 to window zoom; the in-app
+> toolbar buttons are always authoritative.
+
+### Export test
+1. Open **Export ▾** in the screenplay toolbar.
+2. **Export Fountain (.fountain)** → ✅ downloads a plain-text `.fountain` file.
+3. **Copy Fountain text** → ✅ copies the **raw** Fountain to the clipboard; paste
+   it and confirm notes (`[[ … ]]`), omitted `/* … */`, and emphasis markers are
+   **preserved verbatim** (export is lossless).
+4. **Copy formatted preview** → ✅ copies the readable preview text with notes /
+   omitted text removed and emphasis markers stripped.
+5. **Export PDF / Final Draft / Print** appear but are **disabled** — declared
+   future targets (clean service boundaries for later work).
+
+### Page count test
+With a screenplay open, the toolbar shows **Approx. pages: X**. ✅ The number
+grows as you add scenes/action/dialogue. This is a **rough approximation**
+(~55 lines/page), **not** production pagination — industry-accurate page
+breaks (element spacing, MORE/CONT'D, dialogue splits) are a later task.
+
 ### Other modes test
 1. Switch **Mode → Novel**: the page uses a serif prose face; typing `INT. HOME`
    is **not** screenplay-formatted; the Outline shows only `#` headings.
@@ -351,12 +408,18 @@ The text stays editable; this is an indicator only (no real pagination yet).
 * **Cmd/Ctrl+Alt+N** wraps the selection as a note (`[[ … ]]`);
   **Cmd/Ctrl+Alt+O** omits it into the boneyard (`/* … */`). (`Cmd/Ctrl+Y` is
   intentionally not used — it is redo.)
+* **Cmd/Ctrl+\** centers the current line (wraps/unwraps `> … <`).
+* **Ctrl/Cmd+Shift+E** toggles **Preview**; **Esc** exits Preview.
+* **Ctrl/Cmd+=** / **Ctrl/Cmd+-** / **Ctrl/Cmd+0** scale the editor
+  (Bigger / Smaller / Actual size).
+* **Capitalization** (lowercase → UPPERCASE → Sentence case) is in the
+  **Format ▾** toolbar menu — no shortcut, so **Cmd/Ctrl+K** stays Logos.
 
 ### Screenplay parser test (automated)
 
 The Fountain engine lives in `renderer/src/features/screenplay/` (parser,
 classifier, formatting, keyboard, autocomplete, sections, boneyard, title page,
-export) and is unit-tested independently of the UI:
+preview, export, page count) and is unit-tested independently of the UI:
 
 ```bash
 cd desktop && npm run test:screenplay
@@ -371,7 +434,11 @@ extraction + filtering (prefix-before-substring, context ordering), **section**
 indent/outdent math (Tab/Shift+Tab depth), **boneyard / omitted text** detection
 (single-line + multi-block), **title page** field parsing (incl. multi-line
 values), **export stripping** of notes + boneyard, and **outline** extraction
-with section hierarchy (and prose modes deriving headings only). Emphasis renders
+with section hierarchy (and prose modes deriving headings only). The
+preview/settings/export layer adds: **Preview** building (notes/omitted/title
+page handling + include-outline), **Document Settings** data-attributes,
+**view-scale** state, **Capitalization** + **Center** commands, lossless
+**Fountain export**, and the rough **page-count** approximation. Emphasis renders
 with the raw markers kept but dimmed.
 
 ---
@@ -388,6 +455,12 @@ with the raw markers kept but dimmed.
   restarts. Multi-document / per-project storage is a follow-up.
 - **Editor is plain-text per block** — paragraphs + headings only; no inline
   marks/lists yet (so what you see is exactly what is saved).
+- **Preview / Export / page count are foundations.** Preview is a readable
+  on-screen view (no paginated PDF); export covers Fountain / plain text +
+  clipboard (PDF, Final Draft `.fdx`, and Print are declared future targets);
+  the page count is a rough ~55-lines/page approximation, **not** industry
+  pagination. Document Settings + view scale persist in **localStorage** (not in
+  the backend document).
 - **Packaging is shell-only.** `npm run pack` packages the Electron shell; the
   Python backend is not yet bundled (dev launches it from `backend/`).
 
