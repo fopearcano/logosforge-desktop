@@ -19,8 +19,12 @@ import {
   handleShiftTab,
   handleTab,
   wrapMarker,
+  wrapNote,
+  wrapOmit,
   type AutocompleteContext,
 } from './screenplayKeyboard';
+
+export type { AutocompleteContext };
 
 export const fountainKey = new PluginKey('fountainMode');
 
@@ -84,6 +88,8 @@ export const ScreenplayEditing = Extension.create<ScreenplayOptions>({
       'Mod-b': () => wrapMarker(this.editor, '**'),
       'Mod-i': () => wrapMarker(this.editor, '*'),
       'Mod-u': () => wrapMarker(this.editor, '_'),
+      'Mod-Alt-n': () => wrapNote(this.editor), // Note: [[ … ]] (Cmd/Ctrl+Y avoided — it is redo)
+      'Mod-Alt-o': () => wrapOmit(this.editor), // Omit selected text into the boneyard /* … */
       // Enter is not bound — see screenplayKeyboard.ts. Cmd/Ctrl+K stays free for Logos.
     };
   },

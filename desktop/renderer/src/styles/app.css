@@ -211,6 +211,35 @@ body {
   color: var(--muted);
 }
 
+/* Show/hide filter chips — only rendered when >1 kind of structure exists. */
+.outline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 10px 6px;
+}
+
+.outline-filter {
+  padding: 2px 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.outline-filter:hover {
+  color: var(--text);
+}
+
+.outline-filter.is-active {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
 /* ============================ Whiteboard / editor ============================ */
 .whiteboard {
   display: flex;
@@ -398,10 +427,29 @@ body {
 .wb-editor[data-writing-mode='screenplay'] p.sp-centered {
   text-align: center;
 }
+/* Page break (===) — a subtle horizontal divider; the text stays editable. */
 .wb-editor[data-writing-mode='screenplay'] p.sp-page_break {
+  margin: 1.6em 0;
+  padding-top: 0.4em;
+  border-top: 1px dashed var(--border);
   text-align: center;
-  letter-spacing: 0.4em;
+  font-size: 0.72em;
+  letter-spacing: 0.3em;
   color: var(--paper-muted);
+}
+
+/* Title page metadata (Title:/Author:/…) — subtle, still plain editable text. */
+.wb-editor[data-writing-mode='screenplay'] p.sp-title-page {
+  margin: 0 0 0.15em;
+  color: var(--paper-muted);
+  font-size: 0.92em;
+}
+
+/* Boneyard / omitted text (/* … *​/) — kept but subdued; excluded from export. */
+.wb-editor[data-writing-mode='screenplay'] p.sp-boneyard {
+  color: var(--paper-muted);
+  font-style: italic;
+  opacity: 0.6;
 }
 
 /* Inline Fountain emphasis — the inner text is styled; the raw markers stay
@@ -423,26 +471,63 @@ body {
   opacity: 0.35;
 }
 
-/* Screenplay autocomplete popup. */
+/* Screenplay autocomplete popup — a filter input above a scrolling list. */
 .sp-autocomplete {
   position: fixed;
   z-index: 40;
-  min-width: 180px;
-  max-height: 240px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: 320px;
   padding: 4px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  outline: none;
   font-size: 13px;
 }
 
+.sp-ac-input {
+  margin-bottom: 4px;
+  padding: 5px 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.sp-ac-input:focus {
+  border-color: var(--accent);
+}
+
+.sp-ac-list {
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.sp-ac-empty {
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .sp-ac-item {
+  display: block;
+  width: 100%;
   padding: 5px 10px;
+  background: none;
+  border: none;
   border-radius: 4px;
   color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -803,7 +888,7 @@ body {
 .outline-body,
 .psyke-body,
 .logos-output,
-.sp-autocomplete {
+.sp-ac-list {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
@@ -812,7 +897,7 @@ body {
 .outline-body::-webkit-scrollbar,
 .psyke-body::-webkit-scrollbar,
 .logos-output::-webkit-scrollbar,
-.sp-autocomplete::-webkit-scrollbar {
+.sp-ac-list::-webkit-scrollbar {
   width: 10px;
 }
 
@@ -820,7 +905,7 @@ body {
 .outline-body::-webkit-scrollbar-thumb,
 .psyke-body::-webkit-scrollbar-thumb,
 .logos-output::-webkit-scrollbar-thumb,
-.sp-autocomplete::-webkit-scrollbar-thumb {
+.sp-ac-list::-webkit-scrollbar-thumb {
   background: var(--border);
   background-clip: content-box;
   border: 3px solid transparent;

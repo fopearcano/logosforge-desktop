@@ -9,15 +9,16 @@
 
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
+import { AutocompletePopup } from '../screenplay/AutocompletePopup';
 import type { FountainType } from '../screenplay/fountainTypes';
-import { ScreenplayAutocomplete } from '../screenplay/ScreenplayAutocomplete';
 import {
   ScreenplayEditing,
   currentFountainType,
   fountainKey,
 } from '../screenplay/screenplayExtension';
+import { useScreenplayAutocomplete } from '../screenplay/useScreenplayAutocomplete';
 import type { WhiteboardBlock } from './types';
 
 // --- block <-> ProseMirror document mapping --------------------------------
@@ -61,13 +62,6 @@ interface Props {
   onElementChange?: (type: FountainType | null) => void;
 }
 
-interface AcState {
-  open: boolean;
-  left: number;
-  top: number;
-  suggestions: string[];
-}
-
 export function WhiteboardEditor({
   initialBlocks,
   mode,
@@ -82,10 +76,7 @@ export function WhiteboardEditor({
   const onElementRef = useRef(onElementChange);
   onElementRef.current = onElementChange;
 
-  const [ac, setAc] = useState<AcState>({ open: false, left: 0, top: 0, suggestions: [] });
-  const openAcRef = useRef((ctx: { left: number; top: number; suggestions: string[] }) =>
-    setAc({ open: true, ...ctx }),
-  );
+  const { onAutocomplete, setEditor: setAcEditor, popup } = useScreenplayAutocomplete();
 
   const editor = useEditor({
     extensions: [
@@ -103,7 +94,7 @@ export function WhiteboardEditor({
         listItem: false,
         hardBreak: false,
       }),
-      ScreenplayEditing.configure({ onAutocomplete: (ctx) => openAcRef.current(ctx) }),
+      ScreenplayEditing.configure({ onAutocomplete }),
     ],
     content: blocksToDoc(initialBlocks),
     autofocus: 'end',
@@ -129,24 +120,15 @@ export function WhiteboardEditor({
 
   useEffect(() => {
     if (!editor) return;
+    setAcEditor(editor);
     onReadyRef.current?.(editor);
     onElementRef.current?.(currentFountainType(editor));
-  }, [editor]);
+  }, [editor, setAcEditor]);
 
   return (
     <>
       <EditorContent editor={editor} className="wb-content" />
-      <ScreenplayAutocomplete
-        open={ac.open}
-        left={ac.left}
-        top={ac.top}
-        suggestions={ac.suggestions}
-        onSelect={(text) => {
-          editor?.chain().focus().insertContent(text).run();
-          setAc((s) => ({ ...s, open: false }));
-        }}
-        onClose={() => setAc((s) => ({ ...s, open: false }))}
-      />
+      <AutocompletePopup {...popup} />
     </>
   );
 }

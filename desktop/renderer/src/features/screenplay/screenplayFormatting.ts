@@ -1,5 +1,7 @@
 /**
  * Builds ProseMirror decorations for Screenplay mode:
+ *  - title-page metadata (subdued) at the top of the document;
+ *  - boneyard / omitted text (subdued) wherever it appears;
  *  - block element classes (sp-scene_heading, sp-character, …) from the classifier;
  *  - inline emphasis (bold/italic/underline) + dimmed markers from the parser.
  *
@@ -10,7 +12,9 @@
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 
 import { parseEmphasis } from './fountainParser';
+import { detectBoneyard } from './screenplayBoneyard';
 import { classify } from './screenplayClassifier';
+import { parseTitlePage } from './screenplayTitlePage';
 import type { FountainBlock } from './fountainTypes';
 
 export function docToFountainBlocks(doc: any): FountainBlock[] {
@@ -26,15 +30,30 @@ export function docToFountainBlocks(doc: any): FountainBlock[] {
 }
 
 export function buildDecorations(doc: any): DecorationSet {
-  const types = classify(docToFountainBlocks(doc));
+  const blocks = docToFountainBlocks(doc);
+  const types = classify(blocks);
+  const boneyard = detectBoneyard(blocks);
+  const titleEnd = parseTitlePage(blocks).endIndex;
   const decos: Decoration[] = [];
+
   doc.forEach((node: any, offset: number, index: number) => {
     if (node.type.name !== 'paragraph') return;
+    const range = { from: offset, to: offset + node.nodeSize };
+
+    // Title page + boneyard are rendered subdued and skip element/emphasis.
+    if (index < titleEnd) {
+      decos.push(Decoration.node(range.from, range.to, { class: 'sp-title-page' }));
+      return;
+    }
+    if (boneyard[index]) {
+      decos.push(Decoration.node(range.from, range.to, { class: 'sp-boneyard' }));
+      return;
+    }
 
     // Block element formatting.
     const type = types[index];
     if (type && type !== 'action' && type !== 'empty') {
-      decos.push(Decoration.node(offset, offset + node.nodeSize, { class: `sp-${type}` }));
+      decos.push(Decoration.node(range.from, range.to, { class: `sp-${type}` }));
     }
 
     // Inline emphasis (paragraphs contain only text in our schema, so a text

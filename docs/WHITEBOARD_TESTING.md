@@ -240,18 +240,100 @@ Expected (classification is automatic — no manual block cycling):
 * `CUT TO:` → **Transition** (right-aligned).
 * The status line shows the inferred element at the cursor.
 
-### Fountain structure test
+### Outline test
 Still in Screenplay mode, type:
 
 ```
 # Act One
 
+## Sequence One
+
 = Opening image
 [[Need stronger hook]]
+
+INT. HOUSE - DAY
+
+She opens the door.
 ```
 
-Expected: the **Outline** shows **Act One** (section), **Opening image**
-(synopsis) and **Need stronger hook** (note). Clicking an item scrolls to it.
+Expected:
+* The **Outline** shows **Act One** (section, level 1), **Sequence One**
+  (section, level 2, indented further), **Opening image** (synopsis),
+  **Need stronger hook** (note) and **INT. HOUSE - DAY** (scene). Clicking an
+  item scrolls the editor to that line.
+* Because more than one *kind* is present, small **filter chips**
+  (Sections / Scenes / Synopses / Notes) appear under the Outline header. Toggle
+  one **off** to hide that kind from the list; toggle it back **on** to restore
+  it. With a single kind present (e.g. only `#` headings) no chips show.
+
+### Section indent / outdent test
+Put the caret on the `# Act One` line, then:
+* Press **Tab** → it deepens to `## Act One` (level 2); **Tab** again → `###`
+  (level 3, the cap).
+* Press **Shift+Tab** → it shallows back toward `#`; **Shift+Tab** at level 1
+  turns the section back into a normal line.
+
+### Autocomplete test
+In Screenplay mode, on a **new empty line** press **Tab**:
+* A small **autocomplete popup** opens at the caret with a filter box and a list
+  of suggestions — the static slugs (`INT. `, `EXT. `, `INT./EXT. `, `EST. `,
+  `CUT TO:`, `FADE OUT:`, `FADE IN:`, …) plus any **character names**, **scene
+  headings** and **transitions** already used in the document.
+* Type `E` → the list filters to entries that start with / contain `E`
+  (e.g. `EXT. `, `EST. `, and a character like `ELENA` if one exists).
+* **↑/↓** move the highlight; **Enter**, **Tab**, or a **click** insert the
+  choice onto the line; **Esc** (or clicking away) closes without changing it.
+* Right after a **Character** cue or dialogue, the suggestions are reordered so
+  **character names come first** (the likely next cue).
+
+### Title page test
+At the very **top** of a Screenplay document, type:
+
+```
+Title: My Great Movie
+Credit: Written by
+Author: A. Writer
+Draft date: 2026-06-02
+
+INT. HOUSE - DAY
+```
+
+Expected:
+* The `Title:` / `Credit:` / `Author:` / `Draft date:` lines render **subtly**
+  (muted) as title-page metadata, while staying **plain, editable text**.
+* The blank line ends the title page; `INT. HOUSE - DAY` below it formats as a
+  normal Scene Heading.
+* The metadata **persists** across save/reload (it is ordinary document text).
+* Indented continuation lines under a key (e.g. a second `Contact:` line) are
+  treated as part of that field.
+
+### Notes & omitted text test
+In Screenplay mode:
+* Type `[[remember to plant the key here]]` on its own line → it renders
+  **subtly** (a colored/dimmed note) and is excluded from preview/export.
+* Select some text and press **Cmd/Ctrl+Alt+N** → it is wrapped as a note
+  `[[ … ]]`.
+* Type a `/* … */` block across one or more lines, e.g.:
+
+  ```
+  /*
+  This scene is cut for now.
+  */
+  ```
+
+  → the boneyard text stays in the document but is shown **subdued** (dimmed,
+  italic) and is excluded from preview/export. It is **not deleted**.
+* Select text and press **Cmd/Ctrl+Alt+O** → it is wrapped into the boneyard
+  `/* … */` ("omit selected text").
+
+> **Shortcut note:** the suggested `Cmd/Ctrl+Y` for Note conflicts with the
+> editor's **redo** binding, so Note/Omit use **Cmd/Ctrl+Alt+N** /
+> **Cmd/Ctrl+Alt+O** instead.
+
+### Page break test
+Type a line containing only `===` → it renders as a **subtle horizontal
+page-break divider** (a faint dashed rule with the `===` shown small and muted).
+The text stays editable; this is an indicator only (no real pagination yet).
 
 ### Other modes test
 1. Switch **Mode → Novel**: the page uses a serif prose face; typing `INT. HOME`
@@ -261,16 +343,20 @@ Expected: the **Outline** shows **Act One** (section), **Opening image**
 
 ### Keyboard test
 * **Ctrl/Cmd+K** opens Logos (it is *not* repurposed for cycling/uppercase).
-* **Tab** on an empty Screenplay line opens the autocomplete popup; **Shift+Tab**
-  on a heading reduces its section depth; Tab never moves focus out of the editor.
+* **Tab** on an empty Screenplay line opens the autocomplete popup; **Tab** on a
+  Section line deepens it; **Shift+Tab** on a Section reduces its depth (and at
+  level 1 turns it back into a normal line). Tab never moves focus out of the editor.
 * **Cmd/Ctrl+B/I/U** wrap the selection in Fountain emphasis markers
   (`**bold**` / `*italic*` / `_underline_`).
+* **Cmd/Ctrl+Alt+N** wraps the selection as a note (`[[ … ]]`);
+  **Cmd/Ctrl+Alt+O** omits it into the boneyard (`/* … */`). (`Cmd/Ctrl+Y` is
+  intentionally not used — it is redo.)
 
 ### Screenplay parser test (automated)
 
 The Fountain engine lives in `renderer/src/features/screenplay/` (parser,
-classifier, formatting, keyboard, autocomplete) and is unit-tested independently
-of the UI:
+classifier, formatting, keyboard, autocomplete, sections, boneyard, title page,
+export) and is unit-tested independently of the UI:
 
 ```bash
 cd desktop && npm run test:screenplay
@@ -280,7 +366,13 @@ It covers scene headings (`INT.`/`EXT.`/`INT./EXT.`/`I/E.`/`EST.` + forced `.`),
 action, character→dialogue, parentheticals, transitions (`TO:` + forced `>`),
 centered (`> … <`), sections (`#`), synopses (`=`), notes (`[[ ]]`), page breaks
 (`===`), and inline emphasis (`***bold italic***` / `**bold**` / `*italic*` /
-`_underline_`). Emphasis renders with the raw markers kept but dimmed.
+`_underline_`). It also covers the newer feature layer: **autocomplete**
+extraction + filtering (prefix-before-substring, context ordering), **section**
+indent/outdent math (Tab/Shift+Tab depth), **boneyard / omitted text** detection
+(single-line + multi-block), **title page** field parsing (incl. multi-line
+values), **export stripping** of notes + boneyard, and **outline** extraction
+with section hierarchy (and prose modes deriving headings only). Emphasis renders
+with the raw markers kept but dimmed.
 
 ---
 
