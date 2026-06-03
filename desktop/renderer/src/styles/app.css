@@ -829,6 +829,66 @@ body {
   opacity: 0;
 }
 
+/* ===================== Distraction-free / Focus Mode ===================== */
+/* Hide just the top toolbar (editor expands upward; status bar stays). */
+.app.is-top-hidden .titlebar {
+  display: none;
+}
+
+/* Focus Mode: drop ALL chrome so the window becomes a bare writing sheet —
+   white in Light, dark in Dark (the surface already uses var(--paper)). */
+.app.is-focus .titlebar,
+.app.is-focus .statusbar,
+.app.is-focus .outline-panel,
+.app.is-focus .wb-statusline,
+.app.is-focus .wb-toolbar {
+  display: none;
+}
+.app.is-focus {
+  background: var(--paper);
+}
+
+/* Subtle, temporary "press Esc" hint — fades on its own; no permanent chrome. */
+.focus-hint {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 5px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+  animation: focus-hint-fade 2.2s ease forwards;
+}
+@keyframes focus-hint-fade {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* File-name + dirty state chip in the status line. */
+.wb-file {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 /* ===================== Nerd Mode editor tools (optional) ===================== */
 /* Everything here is gated by a data-* flag on the surface, so the default
    Whiteboard is untouched until a writer turns a tool on. */

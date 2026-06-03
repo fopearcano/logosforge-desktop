@@ -32,7 +32,7 @@ function textOf(node: any): string {
   return '';
 }
 
-function blocksToDoc(blocks: WhiteboardBlock[]) {
+export function blocksToDoc(blocks: WhiteboardBlock[]) {
   const content = blocks.map((b) => {
     const inline = b.text ? [{ type: 'text', text: b.text }] : [];
     if (b.type === 'heading') {

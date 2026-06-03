@@ -129,9 +129,10 @@ engine and the Nerd Mode editor tools are pure and unit-tested:
 
 ```bash
 cd desktop
-npm test                 # typecheck + screenplay tests + editor-tools tests
+npm test                 # typecheck + screenplay + editor-tools + files tests
 npm run test:screenplay  # just the Fountain parser/classifier tests
 npm run test:editor-tools # line numbers, folding, syntax classify, themes
+npm run test:files       # file <-> text serialization round-trips
 npm run build            # verify the renderer bundles and electron compiles
 ```
 
@@ -420,6 +421,12 @@ breaks (element spacing, MORE/CONT'D, dialogue splits) are a later task.
   **Cmd/Ctrl+Shift+F** folding, **Cmd/Ctrl+Shift+H** syntax highlighting. These
   were free (no conflict with Logos `Cmd/Ctrl+K`, the outline/PSYKE `Shift+O/P`,
   or Preview `Shift+E`).
+* **Distraction-free**: **Cmd/Ctrl+Shift+T** hides/shows the top panel;
+  **Cmd/Ctrl+Shift+D** toggles Focus Mode (`Shift+F` was already folding, so
+  Focus Mode uses **Shift+D**); **Esc** exits Focus Mode.
+* **File** (native menu accelerators): **Cmd/Ctrl+N** New, **Cmd/Ctrl+O** Open,
+  **Cmd/Ctrl+S** Save, **Cmd/Ctrl+Shift+S** Save As. `Cmd/Ctrl+K` is never bound
+  in the menu — it stays Logos.
 
 ### Nerd Mode test
 Nerd Mode aids are **off by default** — the page stays clean until you opt in via
@@ -452,6 +459,46 @@ the **Editor** button (right of the status line) or the shortcuts above.
 > **Note:** fold state is remembered best-effort by block position; after heavy
 > edits a block may re-expand, but the text is never lost. The "Reset editor view"
 > button in the popover clears all aids + folds.
+
+### Focus Mode test (distraction-free)
+1. Launch the app (`npm run dev`).
+2. Press **Cmd/Ctrl+Shift+T** (or click **▲** in the top-right, or View → Toggle
+   Top Panel).
+3. ✅ The top toolbar disappears completely (no rail, no placeholder strip).
+4. ✅ The editor expands upward into the freed space; the status bar stays.
+5. Press **Cmd/Ctrl+Shift+T** again.
+6. ✅ The top panel returns.
+7. Enter **Focus Mode** — **Cmd/Ctrl+Shift+D** (or the **◌** button, or
+   View → Focus Mode).
+8. ✅ The top panel, Outline, status bar, PSYKE button and the writing-mode/
+   status line all disappear — the window becomes a bare writing sheet (white in
+   Light theme, dark in Dark theme). A subtle "press Esc to exit" hint fades in
+   and out.
+9. Press **Escape**.
+10. ✅ All UI returns.
+11. ✅ While in Focus Mode, **Cmd/Ctrl+K** still opens the Logos assistant.
+
+### File management test
+> File operations need the desktop app (native dialogs). Backend autosave keeps
+> the live session; **File Save** writes the document you choose to disk.
+
+1. Type some text.
+2. **File → Save As…** (Cmd/Ctrl+Shift+S).
+3. Save as `test.fountain` (Screenplay defaults to `.fountain`; Novel/Notes to
+   `.md`; `.txt` / `.logosforge` are also offered).
+4. ✅ The window title shows `LogosForge Whiteboard — test.fountain` (no `*`).
+5. Close the app, then reopen it.
+6. **File → Open…** (Cmd/Ctrl+O) and choose `test.fountain` (or use
+   **File → Open Recent**).
+7. ✅ The text loads into the editor; the status-line chip shows `test.fountain`.
+8. Edit the text.
+9. ✅ The window title gains a `*` and the status chip shows `*` (unsaved).
+10. **File → Save** (Cmd/Ctrl+S) → ✅ writes back to the same file; the `*` clears.
+11. Close and reopen the file → ✅ the edits persist on disk.
+12. **File → New** (Cmd/Ctrl+N) with unsaved changes → ✅ a native prompt asks
+    “Save changes before continuing?” (Save / Don't Save / Cancel).
+13. ✅ Throughout, the backend autosave indicator and reconnection still work
+    (the session draft is independent of the on-disk file).
 
 ### Screenplay parser test (automated)
 
@@ -511,6 +558,18 @@ syntax-theme switching.
   `logosforge-folds`). Folding is visual-only — it never edits the document, so
   hidden text is always saved. Line numbers are per-block (not per-wrapped-line),
   and inline PSYKE references are a reserved token (no established syntax yet).
+- **Two persistence layers (by design).** *Backend autosave* protects the live
+  session/draft (`~/.logosforge/whiteboard.json`); *File → Save* writes a
+  user-chosen plain-text/Fountain file to disk via native dialogs. Opening a file
+  loads it into the editor, which then autosaves to the backend too, so the
+  session stays in sync. File ops require the desktop app (the renderer never
+  touches the filesystem — everything goes through secure IPC). Recent files are
+  stored by the main process (`recent-files.json` in userData) and shown under
+  **File → Open Recent**.
+- **Distraction-free is local + session-aware.** Top-panel-hidden and outline
+  visibility persist in localStorage; **Focus Mode always starts off** on a fresh
+  launch (so you never boot into a chrome-less window by surprise) and exits on
+  **Esc**.
 - **Packaging is shell-only.** `npm run pack` packages the Electron shell; the
   Python backend is not yet bundled (dev launches it from `backend/`).
 

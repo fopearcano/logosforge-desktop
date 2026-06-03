@@ -10,6 +10,7 @@ import { EditorSettingsPopover } from '../editorTools/EditorSettingsPopover';
 import { editorToolsAttrs, editorToolsVars } from '../editorTools/editorToolsSurface';
 import { useFolding } from '../editorTools/folding/useFolding';
 import { useEditorTools } from '../editorTools/useEditorTools';
+import { useFileDocument } from '../files/useFileDocument';
 import { LogosFloatingBox } from '../logos/LogosFloatingBox';
 import { PreviewView } from '../screenplay/PreviewView';
 import { toFountainBlocks } from '../screenplay/screenplayExport';
@@ -25,7 +26,7 @@ import type { SaveStatus, WhiteboardBlock } from './types';
 import { useDocumentSettings } from './useDocumentSettings';
 import { useEditorScale } from './useEditorScale';
 import { useWhiteboardDocument } from './useWhiteboardDocument';
-import { WhiteboardEditor } from './WhiteboardEditor';
+import { blocksToDoc, WhiteboardEditor } from './WhiteboardEditor';
 
 const SAVE_LABEL: Record<SaveStatus, string> = {
   idle: '',
@@ -75,15 +76,34 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
   const isScreenplay = mode === 'screenplay';
   const showPreview = isScreenplay && preview;
 
+  // Desktop file management (New/Open/Save/Save As) — backend autosave keeps the
+  // session; these write user-chosen files. Loading a file replaces the editor
+  // content (which re-autosaves), so the session copy stays in sync.
+  const editorRef = useRef(editor);
+  editorRef.current = editor;
+  const liveBlocksRef = useRef(liveBlocks);
+  liveBlocksRef.current = liveBlocks;
+  const loadBlocks = useCallback((blocks: WhiteboardBlock[]) => {
+    editorRef.current?.commands.setContent(blocksToDoc(blocks), true);
+  }, []);
+  const fileDoc = useFileDocument({ getBlocks: () => liveBlocksRef.current, loadBlocks, mode });
+  const markFileDirty = fileDoc.markDirty;
+
   // Autosave + recompute the (client-derived) outline + live snapshot on edit.
   const handleBlocks = useCallback(
     (blocks: WhiteboardBlock[]) => {
+      markFileDirty();
       setLiveBlocks(blocks);
       onChangeBlocks(blocks);
       onOutlineRef.current?.(deriveOutline(blocks, doc?.mode ?? 'novel'));
     },
-    [onChangeBlocks, doc?.mode],
+    [onChangeBlocks, doc?.mode, markFileDirty],
   );
+
+  // Reflect the current file + dirty state in the window/document title.
+  useEffect(() => {
+    document.title = `LogosForge Whiteboard — ${fileDoc.fileName}${fileDoc.dirty ? ' *' : ''}`;
+  }, [fileDoc.fileName, fileDoc.dirty]);
 
   // Re-derive the outline whenever the document loads/changes; reset the live
   // snapshot only when a different document loads.
@@ -178,6 +198,16 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
               {screenplayLabel(element)}
             </span>
           )}
+          <span className="wb-file" title={fileDoc.filePath ?? 'Not saved to a file yet'}>
+            {fileDoc.fileName}
+            {fileDoc.status === 'saving'
+              ? ' · Saving…'
+              : fileDoc.status === 'error'
+                ? ' · Save failed'
+                : fileDoc.dirty
+                  ? ' *'
+                  : ''}
+          </span>
         </div>
         <div className="wb-statusline-right">
           <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
