@@ -478,27 +478,51 @@ the **Editor** button (right of the status line) or the shortcuts above.
 10. ✅ All UI returns.
 11. ✅ While in Focus Mode, **Cmd/Ctrl+K** still opens the Logos assistant.
 
-### File management test
-> File operations need the desktop app (native dialogs). Backend autosave keeps
-> the live session; **File Save** writes the document you choose to disk.
+### File menu test
+> File operations need the desktop app (native dialogs). There are two ways in:
+> the **native menu** (macOS menu bar / window menu) and the in-app **File ▾**
+> button at the top-left of the writing area (a fallback that always works).
 
-1. Type some text.
-2. **File → Save As…** (Cmd/Ctrl+Shift+S).
-3. Save as `test.fountain` (Screenplay defaults to `.fountain`; Novel/Notes to
-   `.md`; `.txt` / `.logosforge` are also offered).
-4. ✅ The window title shows `LogosForge Whiteboard — test.fountain` (no `*`).
-5. Close the app, then reopen it.
-6. **File → Open…** (Cmd/Ctrl+O) and choose `test.fountain` (or use
-   **File → Open Recent**).
-7. ✅ The text loads into the editor; the status-line chip shows `test.fountain`.
-8. Edit the text.
-9. ✅ The window title gains a `*` and the status chip shows `*` (unsaved).
-10. **File → Save** (Cmd/Ctrl+S) → ✅ writes back to the same file; the `*` clears.
-11. Close and reopen the file → ✅ the edits persist on disk.
-12. **File → New** (Cmd/Ctrl+N) with unsaved changes → ✅ a native prompt asks
-    “Save changes before continuing?” (Save / Don't Save / Cancel).
-13. ✅ Throughout, the backend autosave indicator and reconnection still work
-    (the session draft is independent of the on-disk file).
+1. Launch Electron (`npm run dev`).
+2. ✅ The native menu bar contains **File** (on macOS, at the top of the screen).
+3. Open the **File** menu.
+4. ✅ It lists **New**, **Open…**, **Save**, **Save As…**, **Close** (+ Open Recent).
+5. ✅ Each item shows its shortcut (⌘N / ⌘O / ⌘S / ⇧⌘S / ⌘W).
+6. **Cmd/Ctrl+N** → ✅ creates a new blank document (prompting first if dirty).
+7. **Cmd/Ctrl+O** → ✅ opens the native file picker
+   (`.fountain` / `.txt` / `.md` / `.logosforge` / `.logforge`).
+8. **Cmd/Ctrl+S** → ✅ saves (Save As the first time).
+9. **Cmd/Ctrl+Shift+S** → ✅ opens the Save As dialog.
+10. ✅ The in-app **File ▾** button performs the same New/Open/Save/Save As.
+
+### Blank startup test
+1. Type some text; optionally Save (or don't).
+2. Quit the app.
+3. Reopen the app.
+4. ✅ The app starts with a **blank page** (the previous session is **not**
+   auto-loaded — autosave is kept only as a future recovery foundation).
+5. ✅ The window title is `LogosForge Whiteboard — Untitled` (no `*` until you type).
+
+### Unsaved close test
+1. Start the app.
+2. Type text (title gains a `*`).
+3. Close the window (X, **Cmd/Ctrl+W**, or File → Close).
+4. ✅ A native prompt appears: “Save changes before closing?” (Save / Don't Save / Cancel).
+5. Click **Cancel** → ✅ the app stays open, nothing lost.
+6. Close again → click **Don't Save** → ✅ the app closes.
+7. Reopen → ✅ blank page (Untitled).
+8. ✅ The same prompt appears for **Cmd/Ctrl+Q** / Quit when there are unsaved changes.
+
+### Save before close test
+1. Start the app; type text.
+2. Close the window; click **Save**.
+3. If Save As opens (no file yet), save `test.fountain`.
+4. ✅ The app closes only after the save succeeds (Cancel in Save As keeps it open).
+5. Reopen the app (blank).
+6. **File → Open** `test.fountain`.
+7. ✅ The text is there; editing it adds the `*`, and **Save** clears it.
+8. ✅ Throughout, the backend connection + autosave indicator still work (the
+   session draft is independent of the on-disk file and is never auto-loaded).
 
 ### Screenplay parser test (automated)
 
@@ -558,11 +582,15 @@ syntax-theme switching.
   `logosforge-folds`). Folding is visual-only — it never edits the document, so
   hidden text is always saved. Line numbers are per-block (not per-wrapped-line),
   and inline PSYKE references are a reserved token (no established syntax yet).
-- **Two persistence layers (by design).** *Backend autosave* protects the live
-  session/draft (`~/.logosforge/whiteboard.json`); *File → Save* writes a
-  user-chosen plain-text/Fountain file to disk via native dialogs. Opening a file
-  loads it into the editor, which then autosaves to the backend too, so the
-  session stays in sync. File ops require the desktop app (the renderer never
+- **Blank startup + two persistence layers (by design).** The app **always
+  starts blank** (`Untitled`, clean) — the previous session is **not**
+  auto-loaded. *Backend autosave* still writes the live session to
+  `~/.logosforge/whiteboard.json` on edits (a recovery foundation for later);
+  *File → Save* writes a user-chosen plain-text/Fountain file to disk via native
+  dialogs. A document stays **dirty until saved to a user file** (autosave does
+  not clear the `*`). The renderer mirrors its dirty flag to the main process,
+  which runs the **save prompt on window close / Cmd-W / quit** (`preventDefault`
+  until the user chooses). File ops require the desktop app (the renderer never
   touches the filesystem — everything goes through secure IPC). Recent files are
   stored by the main process (`recent-files.json` in userData) and shown under
   **File → Open Recent**.

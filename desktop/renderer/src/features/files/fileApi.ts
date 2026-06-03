@@ -39,6 +39,15 @@ const fallback: FilesBridge = {
   async getRecent() {
     return [];
   },
+  setDirty() {
+    /* no-op outside Electron */
+  },
+  onSaveBeforeClose() {
+    return () => {};
+  },
+  sendCloseResult() {
+    /* no-op outside Electron */
+  },
 };
 
 export const fileApi: FilesBridge = bridge.files ?? fallback;

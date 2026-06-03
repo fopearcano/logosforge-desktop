@@ -21,8 +21,14 @@ export interface FilesApi {
   openPath(p: string): Promise<OpenedDoc | null>;
   save(p: string, content: string): Promise<SaveResult>;
   saveAs(suggestedName: string, content: string): Promise<SaveAsResult | null>;
-  confirmUnsaved(): Promise<UnsavedChoice>;
+  confirmUnsaved(message?: string): Promise<UnsavedChoice>;
   getRecent(): Promise<string[]>;
+  /** Report modified state to main (drives the close/quit save prompt). */
+  setDirty(dirty: boolean): void;
+  /** Main asks the renderer to save during a close; reply via sendCloseResult. */
+  onSaveBeforeClose(cb: () => void): () => void;
+  /** Tell main whether the save-before-close succeeded (true ⇒ proceed to close). */
+  sendCloseResult(ok: boolean): void;
 }
 
 export interface LogosForgeApi {
@@ -52,8 +58,11 @@ const api: LogosForgeApi = {
     openPath: (p) => ipcRenderer.invoke('file:open-path', p),
     save: (p, content) => ipcRenderer.invoke('file:save', p, content),
     saveAs: (suggestedName, content) => ipcRenderer.invoke('file:save-as', suggestedName, content),
-    confirmUnsaved: () => ipcRenderer.invoke('file:confirm-unsaved'),
+    confirmUnsaved: (message) => ipcRenderer.invoke('file:confirm-unsaved', message),
     getRecent: () => ipcRenderer.invoke('file:get-recent'),
+    setDirty: (dirty) => ipcRenderer.send('file:set-dirty', dirty),
+    onSaveBeforeClose: (cb) => subscribe<void>('app:save-before-close', () => cb()),
+    sendCloseResult: (ok) => ipcRenderer.send('app:close-result', ok),
   },
 
   onMenuFile: (cb) => subscribe<string>('menu:file', cb),

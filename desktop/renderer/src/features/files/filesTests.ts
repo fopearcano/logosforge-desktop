@@ -4,6 +4,7 @@
  */
 
 import type { WhiteboardBlock } from '../whiteboard/types';
+import { windowTitle } from './fileState';
 import { baseName, blocksToText, defaultExtForMode, suggestedFileName, textToBlocks } from './fileSerialize';
 
 let passed = 0;
@@ -58,6 +59,12 @@ check('suggested untitled novel', suggestedFileName(null, 'novel') === 'untitled
 check('suggested from path', suggestedFileName('/a/b/my-script.fountain', 'novel') === 'my-script.fountain');
 check('baseName unix', baseName('/a/b/c.md') === 'c.md');
 check('baseName windows', baseName('C:\\docs\\x.txt') === 'x.txt');
+
+// 6. Window title (clean / dirty / untitled)
+check('title untitled clean', windowTitle('Untitled', false) === 'LogosForge Whiteboard — Untitled');
+check('title untitled dirty', windowTitle('Untitled', true) === 'LogosForge Whiteboard — Untitled *');
+check('title file clean', windowTitle('my.fountain', false) === 'LogosForge Whiteboard — my.fountain');
+check('title file dirty', windowTitle('my.fountain', true) === 'LogosForge Whiteboard — my.fountain *');
 
 // --- report ---
 console.log(`File management tests: ${passed} passed, ${failures.length} failed`);

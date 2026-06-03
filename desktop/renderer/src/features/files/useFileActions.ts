@@ -1,10 +1,11 @@
 /**
- * Desktop document file state: current file path, dirty flag, save status, and
- * the New / Open / Save / Save As / Close operations (wired to the native File
+ * Desktop document file actions: current file path, dirty flag, save status, and
+ * New / Open / Save / Save As (wired to the native File menu + the in-app File
  * menu). Backend autosave keeps the live session; these write user-chosen files.
  *
- * Loading a file replaces the editor content (which then autosaves to the
- * backend too), so the session copy stays in sync.
+ * Dirty tracking is independent of autosave: the document stays dirty until it is
+ * saved to a user file. The dirty flag is mirrored to the main process so the
+ * window-close / quit guard can prompt to save (see electron/main.ts).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -22,7 +23,7 @@ interface Options {
   mode: string;
 }
 
-export interface FileDocApi {
+export interface FileActionsApi {
   filePath: string | null;
   fileName: string;
   dirty: boolean;
@@ -33,10 +34,9 @@ export interface FileDocApi {
   openDocument: () => void;
   saveDocument: () => void;
   saveDocumentAs: () => void;
-  closeDocument: () => void;
 }
 
-export function useFileDocument({ getBlocks, loadBlocks, mode }: Options): FileDocApi {
+export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileActionsApi {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState<FileStatus>('saved');
@@ -53,6 +53,11 @@ export function useFileDocument({ getBlocks, loadBlocks, mode }: Options): FileD
   dirtyRef.current = dirty;
   const suppressDirty = useRef(false);
 
+  // Mirror dirty state to main (drives the close/quit save prompt).
+  useEffect(() => {
+    fileApi.setDirty(dirty);
+  }, [dirty]);
+
   const markDirty = useCallback(() => {
     if (suppressDirty.current) return;
     setDirty(true);
@@ -65,7 +70,6 @@ export function useFileDocument({ getBlocks, loadBlocks, mode }: Options): FileD
     setFilePath(path);
     setDirty(false);
     setStatus('saved');
-    // Re-enable dirty tracking once the programmatic load's update has flushed.
     setTimeout(() => {
       suppressDirty.current = false;
     }, 0);
@@ -104,27 +108,30 @@ export function useFileDocument({ getBlocks, loadBlocks, mode }: Options): FileD
   }, [doSaveAs]);
 
   // If there are unsaved changes, ask; returns false to abort the operation.
-  const confirmProceed = useCallback(async (): Promise<boolean> => {
-    if (!dirtyRef.current) return true;
-    const choice = await fileApi.confirmUnsaved();
-    if (choice === 'cancel') return false;
-    if (choice === 'save') return doSave();
-    return true; // dont-save
-  }, [doSave]);
+  const confirmProceed = useCallback(
+    async (message: string): Promise<boolean> => {
+      if (!dirtyRef.current) return true;
+      const choice = await fileApi.confirmUnsaved(message);
+      if (choice === 'cancel') return false;
+      if (choice === 'save') return doSave();
+      return true; // dont-save
+    },
+    [doSave],
+  );
 
   const newDocument = useCallback(async () => {
-    if (await confirmProceed()) loadInto(BLANK, null);
+    if (await confirmProceed('Save changes before creating a new document?')) loadInto(BLANK, null);
   }, [confirmProceed, loadInto]);
 
   const openDocument = useCallback(async () => {
-    if (!(await confirmProceed())) return;
+    if (!(await confirmProceed('Save changes before opening another document?'))) return;
     const doc = await fileApi.open();
     if (doc) loadInto(textToBlocks(doc.content), doc.path);
   }, [confirmProceed, loadInto]);
 
   const openPathDocument = useCallback(
     async (p: string) => {
-      if (!(await confirmProceed())) return;
+      if (!(await confirmProceed('Save changes before opening another document?'))) return;
       const doc = await fileApi.openPath(p);
       if (doc) loadInto(textToBlocks(doc.content), doc.path);
       else setStatus('error');
@@ -132,25 +139,29 @@ export function useFileDocument({ getBlocks, loadBlocks, mode }: Options): FileD
     [confirmProceed, loadInto],
   );
 
-  const closeDocument = useCallback(async () => {
-    if (await confirmProceed()) loadInto(BLANK, null);
-  }, [confirmProceed, loadInto]);
-
-  // Native File-menu actions.
+  // Native File-menu actions (mouse + accelerators).
   useEffect(() => {
     const offFile = onMenuFile((action) => {
       if (action === 'new') void newDocument();
       else if (action === 'open') void openDocument();
       else if (action === 'save') void doSave();
       else if (action === 'saveAs') void doSaveAs();
-      else if (action === 'close') void closeDocument();
     });
     const offRecent = onMenuOpenRecent((p) => void openPathDocument(p));
     return () => {
       offFile();
       offRecent();
     };
-  }, [newDocument, openDocument, doSave, doSaveAs, closeDocument, openPathDocument]);
+  }, [newDocument, openDocument, doSave, doSaveAs, openPathDocument]);
+
+  // Main asks us to save during a window close / quit; reply with the result.
+  useEffect(
+    () =>
+      fileApi.onSaveBeforeClose(() => {
+        void doSave().then((ok) => fileApi.sendCloseResult(ok));
+      }),
+    [doSave],
+  );
 
   return {
     filePath,
@@ -162,6 +173,5 @@ export function useFileDocument({ getBlocks, loadBlocks, mode }: Options): FileD
     openDocument: () => void openDocument(),
     saveDocument: () => void doSave(),
     saveDocumentAs: () => void doSaveAs(),
-    closeDocument: () => void closeDocument(),
   };
 }

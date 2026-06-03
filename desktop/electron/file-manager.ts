@@ -84,6 +84,22 @@ async function readDoc(p: string): Promise<OpenedDoc | null> {
   }
 }
 
+export type UnsavedChoice = 'save' | 'dont-save' | 'cancel';
+
+/** Native 3-button save prompt (shared by the New/Open flow and the close guard). */
+export async function confirmSavePrompt(win: BrowserWindow, message: string): Promise<UnsavedChoice> {
+  const res = await dialog.showMessageBox(win, {
+    type: 'warning',
+    buttons: ['Save', "Don't Save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+    message,
+    detail: 'Your document has unsaved changes.',
+  });
+  return res.response === 0 ? 'save' : res.response === 1 ? 'dont-save' : 'cancel';
+}
+
 /** Register the file IPC handlers. `getWindow` returns the active window. */
 export function registerFileIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('file:open', async (): Promise<OpenedDoc | null> => {
@@ -128,19 +144,10 @@ export function registerFileIpc(getWindow: () => BrowserWindow | null): void {
     }
   });
 
-  ipcMain.handle('file:confirm-unsaved', async (): Promise<'save' | 'dont-save' | 'cancel'> => {
+  ipcMain.handle('file:confirm-unsaved', async (_e, message?: string): Promise<UnsavedChoice> => {
     const win = getWindow();
     if (!win) return 'dont-save';
-    const res = await dialog.showMessageBox(win, {
-      type: 'warning',
-      buttons: ['Save', "Don't Save", 'Cancel'],
-      defaultId: 0,
-      cancelId: 2,
-      noLink: true,
-      message: 'Save changes before continuing?',
-      detail: 'Your document has unsaved changes that will be lost.',
-    });
-    return res.response === 0 ? 'save' : res.response === 1 ? 'dont-save' : 'cancel';
+    return confirmSavePrompt(win, message ?? 'Save changes before continuing?');
   });
 
   ipcMain.handle('file:get-recent', () => recents);

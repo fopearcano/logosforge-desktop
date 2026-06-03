@@ -1,14 +1,29 @@
 /**
- * Loads the whiteboard document once the backend is ready and autosaves edits
- * with a debounce. Exposes load/loading/error state and a save status.
+ * Provides a blank document on startup and autosaves edits to the backend with a
+ * debounce. Exposes load/loading/error state and a save status.
+ *
+ * Task 5 — blank startup: the app deliberately does NOT auto-load the persisted
+ * backend session on a normal launch. Autosave still writes the session to the
+ * backend on the first edit (a recovery foundation), but startup is always a
+ * blank, clean, Untitled document.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SaveStatus, WhiteboardBlock, WhiteboardDocument } from './types';
-import { getWhiteboard, updateWhiteboard } from './whiteboardApi';
+import { updateWhiteboard } from './whiteboardApi';
 
 const SAVE_DEBOUNCE_MS = 700;
+
+function blankDocument(): WhiteboardDocument {
+  return {
+    id: 'session',
+    title: 'Untitled',
+    mode: 'novel',
+    blocks: [{ id: 'b0', type: 'paragraph', text: '' }],
+    updated_at: new Date().toISOString(),
+  };
+}
 
 interface Options {
   baseUrl: string;
@@ -38,27 +53,13 @@ export function useWhiteboardDocument({ baseUrl, ready, onSaved }: Options): Res
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<WhiteboardBlock[] | null>(null);
 
-  // Load the document once the backend reports ready.
+  // Start blank once the backend is ready — do NOT auto-load the old session.
   useEffect(() => {
     if (!ready) return;
-    let active = true;
-    setLoading(true);
     setLoadError(null);
-    getWhiteboard(baseUrl)
-      .then((d) => {
-        if (!active) return;
-        setDoc(d);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        setLoadError(err instanceof Error ? err.message : String(err));
-        setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [baseUrl, ready]);
+    setLoading(false);
+    setDoc((prev) => prev ?? blankDocument());
+  }, [ready]);
 
   const flush = useCallback(async () => {
     const blocks = pending.current;
@@ -66,8 +67,10 @@ export function useWhiteboardDocument({ baseUrl, ready, onSaved }: Options): Res
     pending.current = null;
     setSaveStatus('saving');
     try {
-      const updated = await updateWhiteboard(baseUrl, { blocks });
-      setDoc(updated);
+      // Autosave the session to the backend, but keep our local blank-startup
+      // doc id/blocks (the editor + liveBlocks are the source of truth — do NOT
+      // replace `doc` with the server copy, which would remount/reset content).
+      await updateWhiteboard(baseUrl, { blocks });
       setSaveStatus('saved');
       onSavedRef.current?.();
     } catch {
@@ -87,13 +90,13 @@ export function useWhiteboardDocument({ baseUrl, ready, onSaved }: Options): Res
     [flush],
   );
 
-  // A deliberate, immediate save of just the writing mode (partial update).
+  // Change the writing mode locally (keep id + blocks) and persist just the mode.
   const setMode = useCallback(
     async (mode: string) => {
+      setDoc((prev) => (prev ? { ...prev, mode } : prev));
       setSaveStatus('saving');
       try {
-        const updated = await updateWhiteboard(baseUrl, { mode });
-        setDoc(updated);
+        await updateWhiteboard(baseUrl, { mode });
         setSaveStatus('saved');
         onSavedRef.current?.();
       } catch {

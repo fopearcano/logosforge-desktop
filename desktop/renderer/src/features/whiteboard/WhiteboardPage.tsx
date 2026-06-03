@@ -4,13 +4,15 @@
 import type { Editor } from '@tiptap/react';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
+import { Popover } from '../../components/Popover';
 import { deriveOutline } from '../outline/deriveOutline';
 import type { OutlineItem } from '../outline/types';
 import { EditorSettingsPopover } from '../editorTools/EditorSettingsPopover';
 import { editorToolsAttrs, editorToolsVars } from '../editorTools/editorToolsSurface';
 import { useFolding } from '../editorTools/folding/useFolding';
 import { useEditorTools } from '../editorTools/useEditorTools';
-import { useFileDocument } from '../files/useFileDocument';
+import { windowTitle } from '../files/fileState';
+import { useFileActions } from '../files/useFileActions';
 import { LogosFloatingBox } from '../logos/LogosFloatingBox';
 import { PreviewView } from '../screenplay/PreviewView';
 import { toFountainBlocks } from '../screenplay/screenplayExport';
@@ -86,7 +88,7 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
   const loadBlocks = useCallback((blocks: WhiteboardBlock[]) => {
     editorRef.current?.commands.setContent(blocksToDoc(blocks), true);
   }, []);
-  const fileDoc = useFileDocument({ getBlocks: () => liveBlocksRef.current, loadBlocks, mode });
+  const fileDoc = useFileActions({ getBlocks: () => liveBlocksRef.current, loadBlocks, mode });
   const markFileDirty = fileDoc.markDirty;
 
   // Autosave + recompute the (client-derived) outline + live snapshot on edit.
@@ -102,17 +104,20 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
 
   // Reflect the current file + dirty state in the window/document title.
   useEffect(() => {
-    document.title = `LogosForge Whiteboard — ${fileDoc.fileName}${fileDoc.dirty ? ' *' : ''}`;
+    document.title = windowTitle(fileDoc.fileName, fileDoc.dirty);
   }, [fileDoc.fileName, fileDoc.dirty]);
 
-  // Re-derive the outline whenever the document loads/changes; reset the live
-  // snapshot only when a different document loads.
+  // Re-derive the outline whenever the document loads or the mode changes; reset
+  // the live snapshot only when a different document loads (a mode switch keeps
+  // the current content, so re-derive from the live blocks, not doc.blocks).
   useEffect(() => {
     if (!doc) return;
-    onOutlineRef.current?.(deriveOutline(doc.blocks, doc.mode));
     if (doc.id !== lastDocIdRef.current) {
       lastDocIdRef.current = doc.id;
       setLiveBlocks(doc.blocks);
+      onOutlineRef.current?.(deriveOutline(doc.blocks, doc.mode));
+    } else {
+      onOutlineRef.current?.(deriveOutline(liveBlocksRef.current, doc.mode));
     }
   }, [doc]);
 
@@ -192,6 +197,52 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
     <main className="whiteboard">
       <div className="wb-statusline">
         <div className="wb-statusline-left">
+          <Popover label="File" title="File menu">
+            {(close) => (
+              <div className="wb-menu">
+                <button
+                  type="button"
+                  className="wb-menu-item"
+                  onClick={() => {
+                    fileDoc.newDocument();
+                    close();
+                  }}
+                >
+                  New
+                </button>
+                <button
+                  type="button"
+                  className="wb-menu-item"
+                  onClick={() => {
+                    fileDoc.openDocument();
+                    close();
+                  }}
+                >
+                  Open…
+                </button>
+                <button
+                  type="button"
+                  className="wb-menu-item"
+                  onClick={() => {
+                    fileDoc.saveDocument();
+                    close();
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="wb-menu-item"
+                  onClick={() => {
+                    fileDoc.saveDocumentAs();
+                    close();
+                  }}
+                >
+                  Save As…
+                </button>
+              </div>
+            )}
+          </Popover>
           <WritingModeSelector modes={modes} value={mode} onChange={setMode} disabled={!doc} />
           {isScreenplay && (
             <span className="sp-element" title="Inferred screenplay element">

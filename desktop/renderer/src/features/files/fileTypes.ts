@@ -22,6 +22,9 @@ export interface FilesBridge {
   openPath(p: string): Promise<OpenedDoc | null>;
   save(p: string, content: string): Promise<SaveResult>;
   saveAs(suggestedName: string, content: string): Promise<SaveAsResult | null>;
-  confirmUnsaved(): Promise<UnsavedChoice>;
+  confirmUnsaved(message?: string): Promise<UnsavedChoice>;
   getRecent(): Promise<string[]>;
+  setDirty(dirty: boolean): void;
+  onSaveBeforeClose(cb: () => void): () => void;
+  sendCloseResult(ok: boolean): void;
 }
