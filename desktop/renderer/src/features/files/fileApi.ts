@@ -1,63 +1,49 @@
 /**
- * Typed access to the Electron file bridge, with a graceful fallback when the
- * app runs in a plain browser (Vite dev) where there is no native bridge.
- *
- * The bridge type is augmented onto the existing `LogosForgeBridge` (the file +
- * menu methods are optional, so the backend fallback still satisfies the type).
+ * Typed access to the Electron file bridge. Resolved LAZILY from
+ * `window.logosforge` on each call (never captured at module-load), so it is
+ * robust to preload/init ordering, and degrades to a safe no-op in a plain
+ * browser (Vite dev) where there is no native bridge.
  */
 
-import { bridge } from '../../api/backend';
 import type { FilesBridge } from './fileTypes';
 
-declare module '../../api/backend' {
-  interface LogosForgeBridge {
-    files?: FilesBridge;
-    onMenuFile?(cb: (action: string) => void): () => void;
-    onMenuView?(cb: (action: string) => void): () => void;
-    onMenuOpenRecent?(cb: (p: string) => void): () => void;
-  }
+interface Bridge {
+  files?: FilesBridge;
+  onMenuFile?(cb: (action: string) => void): () => void;
+  onMenuView?(cb: (action: string) => void): () => void;
+  onMenuOpenRecent?(cb: (p: string) => void): () => void;
 }
 
-export const filesAvailable = (): boolean => !!bridge.files;
+function lf(): Bridge | undefined {
+  return (window as unknown as { logosforge?: Bridge }).logosforge;
+}
+function files(): FilesBridge | undefined {
+  return lf()?.files;
+}
 
-const fallback: FilesBridge = {
-  async open() {
-    return null;
-  },
-  async openPath() {
-    return null;
-  },
-  async save() {
-    return { ok: false, error: 'File system unavailable (not running in Electron).' };
-  },
-  async saveAs() {
-    return null;
-  },
-  async confirmUnsaved() {
-    return 'dont-save';
-  },
-  async getRecent() {
-    return [];
-  },
-  setDirty() {
-    /* no-op outside Electron */
-  },
-  onSaveBeforeClose() {
-    return () => {};
-  },
-  sendCloseResult() {
-    /* no-op outside Electron */
-  },
+export const filesAvailable = (): boolean => !!files();
+
+/** Stable façade — each method resolves the live bridge when invoked. */
+export const fileApi: FilesBridge = {
+  open: () => files()?.open() ?? Promise.resolve(null),
+  openPath: (p) => files()?.openPath(p) ?? Promise.resolve(null),
+  save: (p, content) =>
+    files()?.save(p, content) ??
+    Promise.resolve({ ok: false, error: 'File system unavailable (not running in Electron).' }),
+  saveAs: (suggestedName, content) => files()?.saveAs(suggestedName, content) ?? Promise.resolve(null),
+  confirmUnsaved: (message) => files()?.confirmUnsaved(message) ?? Promise.resolve('dont-save'),
+  getRecent: () => files()?.getRecent() ?? Promise.resolve([]),
+  setDirty: (dirty) => files()?.setDirty(dirty),
+  onSaveBeforeClose: (cb) => files()?.onSaveBeforeClose(cb) ?? (() => {}),
+  sendCloseResult: (ok) => files()?.sendCloseResult(ok),
 };
 
-export const fileApi: FilesBridge = bridge.files ?? fallback;
-
 export function onMenuFile(cb: (action: string) => void): () => void {
-  return bridge.onMenuFile?.(cb) ?? (() => {});
+  return lf()?.onMenuFile?.(cb) ?? (() => {});
 }
 export function onMenuView(cb: (action: string) => void): () => void {
-  return bridge.onMenuView?.(cb) ?? (() => {});
+  return lf()?.onMenuView?.(cb) ?? (() => {});
 }
 export function onMenuOpenRecent(cb: (p: string) => void): () => void {
-  return bridge.onMenuOpenRecent?.(cb) ?? (() => {});
+  return lf()?.onMenuOpenRecent?.(cb) ?? (() => {});
 }

@@ -4,7 +4,7 @@
  */
 
 import type { WhiteboardBlock } from '../whiteboard/types';
-import { windowTitle } from './fileState';
+import { fileStateLabel, windowTitle } from './fileState';
 import { baseName, blocksToText, defaultExtForMode, suggestedFileName, textToBlocks } from './fileSerialize';
 
 let passed = 0;
@@ -65,6 +65,12 @@ check('title untitled clean', windowTitle('Untitled', false) === 'LogosForge Whi
 check('title untitled dirty', windowTitle('Untitled', true) === 'LogosForge Whiteboard — Untitled *');
 check('title file clean', windowTitle('my.fountain', false) === 'LogosForge Whiteboard — my.fountain');
 check('title file dirty', windowTitle('my.fountain', true) === 'LogosForge Whiteboard — my.fountain *');
+
+// 7. File-state label (autosave is NOT conflated with file save)
+check('state untitled clean', fileStateLabel('Untitled', false, false) === 'Untitled');
+check('state untitled dirty', fileStateLabel('Untitled', false, true) === 'Untitled — Modified');
+check('state file clean', fileStateLabel('script.fountain', true, false) === 'script.fountain — Saved to file');
+check('state file dirty', fileStateLabel('script.fountain', true, true) === 'script.fountain — Modified');
 
 // --- report ---
 console.log(`File management tests: ${passed} passed, ${failures.length} failed`);

@@ -76,35 +76,45 @@ export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileAc
   }, []);
 
   const doSaveAs = useCallback(async (): Promise<boolean> => {
-    const text = blocksToText(getBlocksRef.current());
-    setStatus('saving');
-    const res = await fileApi.saveAs(suggestedFileName(filePathRef.current, modeRef.current), text);
-    if (!res) {
-      setStatus(dirtyRef.current ? 'unsaved' : 'saved'); // cancelled
+    try {
+      const text = blocksToText(getBlocksRef.current());
+      setStatus('saving');
+      const res = await fileApi.saveAs(suggestedFileName(filePathRef.current, modeRef.current), text);
+      if (!res) {
+        setStatus(dirtyRef.current ? 'unsaved' : 'saved'); // cancelled
+        return false;
+      }
+      if (res.error) {
+        setStatus('error');
+        return false;
+      }
+      setFilePath(res.path);
+      setDirty(false);
+      setStatus('saved');
+      return true;
+    } catch {
+      setStatus('error'); // surface failures instead of failing silently
       return false;
     }
-    if (res.error) {
-      setStatus('error');
-      return false;
-    }
-    setFilePath(res.path);
-    setDirty(false);
-    setStatus('saved');
-    return true;
   }, []);
 
   const doSave = useCallback(async (): Promise<boolean> => {
     const path = filePathRef.current;
     if (!path) return doSaveAs();
-    setStatus('saving');
-    const res = await fileApi.save(path, blocksToText(getBlocksRef.current()));
-    if (!res.ok) {
+    try {
+      setStatus('saving');
+      const res = await fileApi.save(path, blocksToText(getBlocksRef.current()));
+      if (!res.ok) {
+        setStatus('error');
+        return false;
+      }
+      setDirty(false);
+      setStatus('saved');
+      return true;
+    } catch {
       setStatus('error');
       return false;
     }
-    setDirty(false);
-    setStatus('saved');
-    return true;
   }, [doSaveAs]);
 
   // If there are unsaved changes, ask; returns false to abort the operation.
@@ -125,8 +135,12 @@ export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileAc
 
   const openDocument = useCallback(async () => {
     if (!(await confirmProceed('Save changes before opening another document?'))) return;
-    const doc = await fileApi.open();
-    if (doc) loadInto(textToBlocks(doc.content), doc.path);
+    try {
+      const doc = await fileApi.open();
+      if (doc) loadInto(textToBlocks(doc.content), doc.path);
+    } catch {
+      setStatus('error');
+    }
   }, [confirmProceed, loadInto]);
 
   const openPathDocument = useCallback(

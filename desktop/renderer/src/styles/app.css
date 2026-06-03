@@ -268,8 +268,28 @@ body {
   gap: 12px;
 }
 
-.wb-save-error {
+/* Backend autosave/session indicator — subtle, secondary. */
+.wb-draft {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.75;
+}
+.wb-draft-error {
   color: var(--error);
+  opacity: 1;
+}
+
+/* Explicit file-state — the clear "saved to disk" indicator. */
+.wb-filestate {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text);
+}
+.wb-filestate.is-dirty {
+  color: var(--accent);
 }
 
 .mode-selector {
@@ -877,16 +897,6 @@ body {
   100% {
     opacity: 0;
   }
-}
-
-/* File-name + dirty state chip in the status line. */
-.wb-file {
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-  font-size: 11px;
 }
 
 /* ===================== Nerd Mode editor tools (optional) ===================== */

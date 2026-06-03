@@ -478,51 +478,70 @@ the **Editor** button (right of the status line) or the shortcuts above.
 10. ✅ All UI returns.
 11. ✅ While in Focus Mode, **Cmd/Ctrl+K** still opens the Logos assistant.
 
-### File menu test
-> File operations need the desktop app (native dialogs). There are two ways in:
-> the **native menu** (macOS menu bar / window menu) and the in-app **File ▾**
-> button at the top-left of the writing area (a fallback that always works).
+> **Two clearly-separated states.** The subtle **Draft saved / Draft saving /
+> Draft error** label on the right is the *backend autosave/session* — it is NOT
+> a file save. The **file-state** label next to it is the truth about disk:
+> `Untitled`, `Untitled — Modified`, `name.fountain — Saved to file`, or
+> `name.fountain — Modified`. The window title shows `… *` while modified.
 
+### Native menu test
 1. Launch Electron (`npm run dev`).
-2. ✅ The native menu bar contains **File** (on macOS, at the top of the screen).
-3. Open the **File** menu.
-4. ✅ It lists **New**, **Open…**, **Save**, **Save As…**, **Close** (+ Open Recent).
-5. ✅ Each item shows its shortcut (⌘N / ⌘O / ⌘S / ⇧⌘S / ⌘W).
-6. **Cmd/Ctrl+N** → ✅ creates a new blank document (prompting first if dirty).
-7. **Cmd/Ctrl+O** → ✅ opens the native file picker
-   (`.fountain` / `.txt` / `.md` / `.logosforge` / `.logforge`).
-8. **Cmd/Ctrl+S** → ✅ saves (Save As the first time).
-9. **Cmd/Ctrl+Shift+S** → ✅ opens the Save As dialog.
-10. ✅ The in-app **File ▾** button performs the same New/Open/Save/Save As.
+2. Look at the macOS menu bar (top of the screen).
+3. Open **File**.
+4. ✅ File contains **New**, **Open…**, **Save**, **Save As…**, **Close Window**
+   (plus **Open Recent**).
+5. ✅ Shortcuts are visible: ⌘N / ⌘O / ⌘S / ⇧⌘S / ⌘W.
+6. ✅ The app menu (bold app name) has About / Services / Hide / Quit; **⌘Q** quits.
 
-### Blank startup test
-1. Type some text; optionally Save (or don't).
-2. Quit the app.
-3. Reopen the app.
-4. ✅ The app starts with a **blank page** (the previous session is **not**
-   auto-loaded — autosave is kept only as a future recovery foundation).
-5. ✅ The window title is `LogosForge Whiteboard — Untitled` (no `*` until you type).
+### In-app File control test
+1. Click the top-left **File** button in the writing area.
+2. ✅ It lists New, Open…, Save, Save As….
+3. ✅ Each action works and does exactly the same thing as the native menu (one
+   shared file-action pathway — no duplicated logic).
 
-### Unsaved close test
-1. Start the app.
-2. Type text (title gains a `*`).
-3. Close the window (X, **Cmd/Ctrl+W**, or File → Close).
-4. ✅ A native prompt appears: “Save changes before closing?” (Save / Don't Save / Cancel).
-5. Click **Cancel** → ✅ the app stays open, nothing lost.
-6. Close again → click **Don't Save** → ✅ the app closes.
-7. Reopen → ✅ blank page (Untitled).
-8. ✅ The same prompt appears for **Cmd/Ctrl+Q** / Quit when there are unsaved changes.
+### Dirty state test
+1. Start blank → ✅ title is `LogosForge Whiteboard — Untitled`; status shows
+   `Untitled`.
+2. Type text → ✅ title becomes `… — Untitled *`; status shows
+   `Untitled — Modified` (NOT plain “Saved”). The autosave indicator may say
+   “Draft saved” separately — that does **not** clear the modified state.
+
+### Save As test
+1. Press **Cmd/Ctrl+Shift+S**; save as `test.fountain`.
+2. ✅ Title becomes `LogosForge Whiteboard — test.fountain` (no `*`).
+3. ✅ Status shows `test.fountain — Saved to file`.
+
+### Save test
+1. Type more text → ✅ title `test.fountain *`; status `test.fountain — Modified`.
+2. Press **Cmd/Ctrl+S** → ✅ the `*` disappears; status `test.fountain — Saved to file`.
+3. Reopen the file and verify the new content is on disk.
+
+### Open test
+1. Press **Cmd/Ctrl+O**, choose `test.fountain`
+   (`.fountain` / `.txt` / `.md` / `.logosforge` / `.logforge` are supported).
+2. ✅ The content loads; state is clean (no `*`).
+
+### Close protection test
+1. Start blank; type text.
+2. Close the window (X / **Cmd/Ctrl+W** / File → Close Window).
+3. ✅ A native prompt appears: “Save changes before closing?” (Save / Don't Save / Cancel).
+4. Click **Cancel** → ✅ the app stays open.
+5. Close again → **Don't Save** → ✅ the app closes.
+6. ✅ The same prompt covers **Cmd/Ctrl+Q** / Quit and the red close button.
 
 ### Save before close test
-1. Start the app; type text.
-2. Close the window; click **Save**.
-3. If Save As opens (no file yet), save `test.fountain`.
-4. ✅ The app closes only after the save succeeds (Cancel in Save As keeps it open).
-5. Reopen the app (blank).
-6. **File → Open** `test.fountain`.
-7. ✅ The text is there; editing it adds the `*`, and **Save** clears it.
-8. ✅ Throughout, the backend connection + autosave indicator still work (the
-   session draft is independent of the on-disk file and is never auto-loaded).
+1. Start blank; type text; close the window; click **Save**.
+2. If there's no file yet, Save As opens — save `test.fountain`.
+3. ✅ The app closes only after the save succeeds (cancelling Save As keeps it open).
+4. Reopen the app → ✅ blank page (`Untitled`).
+5. **File → Open** `test.fountain` → ✅ the text is there.
+
+### Blank startup test
+1. Type text; Save or don't; quit the app.
+2. Reopen the app.
+3. ✅ The app starts **blank** (the previous session is **not** auto-loaded;
+   autosave is kept only as a future recovery foundation).
+4. ✅ The window title is `LogosForge Whiteboard — Untitled`.
 
 ### Screenplay parser test (automated)
 

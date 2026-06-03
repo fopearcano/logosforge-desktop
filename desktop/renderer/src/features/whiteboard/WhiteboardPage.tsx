@@ -11,7 +11,7 @@ import { EditorSettingsPopover } from '../editorTools/EditorSettingsPopover';
 import { editorToolsAttrs, editorToolsVars } from '../editorTools/editorToolsSurface';
 import { useFolding } from '../editorTools/folding/useFolding';
 import { useEditorTools } from '../editorTools/useEditorTools';
-import { windowTitle } from '../files/fileState';
+import { fileStateLabel, windowTitle } from '../files/fileState';
 import { useFileActions } from '../files/useFileActions';
 import { LogosFloatingBox } from '../logos/LogosFloatingBox';
 import { PreviewView } from '../screenplay/PreviewView';
@@ -30,11 +30,13 @@ import { useEditorScale } from './useEditorScale';
 import { useWhiteboardDocument } from './useWhiteboardDocument';
 import { blocksToDoc, WhiteboardEditor } from './WhiteboardEditor';
 
-const SAVE_LABEL: Record<SaveStatus, string> = {
+// Backend autosave/session indicator — deliberately labelled "Draft …" so it is
+// never confused with an explicit File → Save (see the file-state chip).
+const DRAFT_LABEL: Record<SaveStatus, string> = {
   idle: '',
-  saving: 'Saving…',
-  saved: 'Saved',
-  error: 'Save failed',
+  saving: 'Draft saving…',
+  saved: 'Draft saved',
+  error: 'Draft error',
 };
 
 interface Props {
@@ -249,19 +251,21 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
               {screenplayLabel(element)}
             </span>
           )}
-          <span className="wb-file" title={fileDoc.filePath ?? 'Not saved to a file yet'}>
-            {fileDoc.fileName}
-            {fileDoc.status === 'saving'
-              ? ' · Saving…'
-              : fileDoc.status === 'error'
-                ? ' · Save failed'
-                : fileDoc.dirty
-                  ? ' *'
-                  : ''}
-          </span>
         </div>
         <div className="wb-statusline-right">
-          <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
+          {/* Subtle backend autosave/session indicator (NOT the file save). */}
+          <span className={`wb-draft wb-draft-${saveStatus}`}>{DRAFT_LABEL[saveStatus]}</span>
+          {/* Explicit FILE state — the source of truth for "saved to disk". */}
+          <span
+            className={`wb-filestate${fileDoc.dirty ? ' is-dirty' : ''}`}
+            title={fileDoc.filePath ?? 'Not saved to a file yet (File → Save)'}
+          >
+            {fileDoc.status === 'saving'
+              ? `${fileDoc.fileName} — Saving…`
+              : fileDoc.status === 'error'
+                ? `${fileDoc.fileName} — Save failed`
+                : fileStateLabel(fileDoc.fileName, fileDoc.filePath != null, fileDoc.dirty)}
+          </span>
           <EditorSettingsPopover api={editorToolsApi} onReset={resetEditorView} />
         </div>
       </div>
