@@ -11,6 +11,8 @@ import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useRef } from 'react';
 
+import { EditorTools, editorToolsKey, editorToolsMeta } from '../editorTools/editorToolsExtension';
+import type { EditorToolsState } from '../editorTools/editorToolTypes';
 import { AutocompletePopup } from '../screenplay/AutocompletePopup';
 import type { FountainType } from '../screenplay/fountainTypes';
 import {
@@ -60,6 +62,10 @@ interface Props {
   onEditorReady?: (editor: Editor) => void;
   /** Reports the inferred screenplay element at the cursor (for the status line). */
   onElementChange?: (type: FountainType | null) => void;
+  /** Optional Nerd Mode editor aids (line numbers / folding / syntax). */
+  editorTools: EditorToolsState;
+  folds: Set<number>;
+  onToggleFold: (index: number) => void;
 }
 
 export function WhiteboardEditor({
@@ -68,6 +74,9 @@ export function WhiteboardEditor({
   onChangeBlocks,
   onEditorReady,
   onElementChange,
+  editorTools,
+  folds,
+  onToggleFold,
 }: Props) {
   const onChangeRef = useRef(onChangeBlocks);
   onChangeRef.current = onChangeBlocks;
@@ -75,6 +84,8 @@ export function WhiteboardEditor({
   onReadyRef.current = onEditorReady;
   const onElementRef = useRef(onElementChange);
   onElementRef.current = onElementChange;
+  const onToggleFoldRef = useRef(onToggleFold);
+  onToggleFoldRef.current = onToggleFold;
 
   const { onAutocomplete, setEditor: setAcEditor, popup } = useScreenplayAutocomplete();
 
@@ -95,6 +106,7 @@ export function WhiteboardEditor({
         hardBreak: false,
       }),
       ScreenplayEditing.configure({ onAutocomplete }),
+      EditorTools.configure({ onToggleFold: (i) => onToggleFoldRef.current(i) }),
     ],
     content: blocksToDoc(initialBlocks),
     autofocus: 'end',
@@ -117,6 +129,13 @@ export function WhiteboardEditor({
     editor.view.dom.setAttribute('data-writing-mode', mode);
     editor.view.dispatch(editor.state.tr.setMeta(fountainKey, { screenplay: mode === 'screenplay' }));
   }, [editor, mode]);
+
+  // Push the Nerd Mode tool state (line numbers / folding / syntax / folds) into
+  // the editor-tools plugin so it can (re)render its decorations.
+  useEffect(() => {
+    if (!editor) return;
+    editor.view.dispatch(editor.state.tr.setMeta(editorToolsKey, editorToolsMeta(editorTools, mode, folds)));
+  }, [editor, mode, editorTools, folds]);
 
   useEffect(() => {
     if (!editor) return;

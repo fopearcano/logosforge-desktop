@@ -6,6 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 
 import { deriveOutline } from '../outline/deriveOutline';
 import type { OutlineItem } from '../outline/types';
+import { EditorSettingsPopover } from '../editorTools/EditorSettingsPopover';
+import { editorToolsAttrs, editorToolsVars } from '../editorTools/editorToolsSurface';
+import { useFolding } from '../editorTools/folding/useFolding';
+import { useEditorTools } from '../editorTools/useEditorTools';
 import { LogosFloatingBox } from '../logos/LogosFloatingBox';
 import { PreviewView } from '../screenplay/PreviewView';
 import { toFountainBlocks } from '../screenplay/screenplayExport';
@@ -49,6 +53,17 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
 
   const settingsApi = useDocumentSettings();
   const { scale, apply: applyScale } = useEditorScale();
+
+  // Optional Nerd Mode editor aids (all default off → clean by default).
+  const editorToolsApi = useEditorTools();
+  const editorTools = editorToolsApi.tools;
+  const toggleTool = editorToolsApi.toggle;
+  const resetTools = editorToolsApi.reset;
+  const { folds, toggleFold, clearFolds } = useFolding();
+  const resetEditorView = useCallback(() => {
+    resetTools();
+    clearFolds();
+  }, [resetTools, clearFolds]);
 
   const onOutlineRef = useRef(onOutlineChange);
   onOutlineRef.current = onOutlineChange;
@@ -112,6 +127,22 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
         setPreview((p) => !p);
         return;
       }
+      // Nerd Mode toggles (work in every mode). Cmd/Ctrl+K stays free for Logos.
+      if (mod && e.shiftKey && !e.altKey && (e.key === 'F' || e.key === 'f')) {
+        e.preventDefault();
+        toggleTool('folding');
+        return;
+      }
+      if (mod && e.shiftKey && !e.altKey && (e.key === 'H' || e.key === 'h')) {
+        e.preventDefault();
+        toggleTool('syntax');
+        return;
+      }
+      if (mod && !e.shiftKey && !e.altKey && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault();
+        toggleTool('lineNumbers');
+        return;
+      }
       if (e.key === 'Escape' && previewRef.current) {
         const ae = document.activeElement as HTMLElement | null;
         if (ae && (ae.closest('.wb-popover') || /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))) return;
@@ -120,7 +151,7 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isScreenplay, applyScale]);
+  }, [isScreenplay, applyScale, toggleTool]);
 
   const approxPages = useMemo(
     () => (isScreenplay ? approxPageCount(toFountainBlocks(liveBlocks)) : 0),
@@ -130,10 +161,12 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
   const surfaceStyle = {
     '--measure': modeBehavior(mode).measure,
     '--wb-scale': String(scale),
+    ...editorToolsVars(editorTools),
   } as CSSProperties;
-  const surfaceAttrs = isScreenplay
-    ? { 'data-screenplay': '', ...surfaceDataAttrs(settingsApi.settings) }
-    : {};
+  const surfaceAttrs = {
+    ...(isScreenplay ? { 'data-screenplay': '', ...surfaceDataAttrs(settingsApi.settings) } : {}),
+    ...editorToolsAttrs(editorTools),
+  };
 
   return (
     <main className="whiteboard">
@@ -146,7 +179,10 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
             </span>
           )}
         </div>
-        <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
+        <div className="wb-statusline-right">
+          <span className={`wb-save wb-save-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
+          <EditorSettingsPopover api={editorToolsApi} onReset={resetEditorView} />
+        </div>
       </div>
 
       {isScreenplay && (
@@ -183,6 +219,9 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
               onChangeBlocks={handleBlocks}
               onEditorReady={setEditor}
               onElementChange={setElement}
+              editorTools={editorTools}
+              folds={folds}
+              onToggleFold={toggleFold}
             />
             {showPreview && <PreviewView blocks={liveBlocks} settings={settingsApi.settings} />}
           </>

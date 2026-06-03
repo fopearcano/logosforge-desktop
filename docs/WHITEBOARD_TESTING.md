@@ -122,20 +122,22 @@ The suite covers `/health`, `/api/version`, `/api/whiteboard` (GET + PUT),
 and the `/ws/events` WebSocket. `tests/test_smoke.py` is a single end-to-end
 "is the whole API alive?" check.
 
-### Frontend (type safety + screenplay parser tests)
+### Frontend (type safety + pure engine tests)
 
 There is no UI test framework yet (no Playwright/Vitest), but the screenplay
-engine is pure and unit-tested:
+engine and the Nerd Mode editor tools are pure and unit-tested:
 
 ```bash
 cd desktop
-npm test               # typecheck (electron + renderer) + screenplay parser tests
-npm run test:screenplay # just the Fountain parser/classifier tests
-npm run build          # verify the renderer bundles and electron compiles
+npm test                 # typecheck + screenplay tests + editor-tools tests
+npm run test:screenplay  # just the Fountain parser/classifier tests
+npm run test:editor-tools # line numbers, folding, syntax classify, themes
+npm run build            # verify the renderer bundles and electron compiles
 ```
 
-`test:screenplay` bundles `renderer/src/features/screenplay/screenplayTests.ts`
-with esbuild and runs it in Node (exits non-zero on any failure).
+`test:screenplay` and `test:editor-tools` bundle their test entry
+(`renderer/src/features/{screenplay/screenplayTests,editorTools/editorToolsTests}.ts`)
+with esbuild and run it in Node (exits non-zero on any failure).
 
 ### Live API smoke (from the app's perspective)
 
@@ -414,6 +416,42 @@ breaks (element spacing, MORE/CONT'D, dialogue splits) are a later task.
   (Bigger / Smaller / Actual size).
 * **Capitalization** (lowercase → UPPERCASE → Sentence case) is in the
   **Format ▾** toolbar menu — no shortcut, so **Cmd/Ctrl+K** stays Logos.
+* **Nerd Mode** toggles (all modes): **Cmd/Ctrl+L** line numbers,
+  **Cmd/Ctrl+Shift+F** folding, **Cmd/Ctrl+Shift+H** syntax highlighting. These
+  were free (no conflict with Logos `Cmd/Ctrl+K`, the outline/PSYKE `Shift+O/P`,
+  or Preview `Shift+E`).
+
+### Nerd Mode test
+Nerd Mode aids are **off by default** — the page stays clean until you opt in via
+the **Editor** button (right of the status line) or the shortcuts above.
+
+1. Click **Editor → Show line numbers** (or press **Cmd/Ctrl+L**).
+2. ✅ A subtle left gutter of line numbers appears, aligned to each block and
+   scrolling with the document. (Works in Screenplay, Novel, Notes, Scene.)
+3. Toggle line numbers off.
+4. ✅ The gutter disappears — clean writing mode returns.
+5. Type `# Act One` (Screenplay or Novel).
+6. Add several lines below it.
+7. Enable **Folding** (**Cmd/Ctrl+Shift+F**), hover the heading and click the
+   **▾** gutter toggle to fold *Act One*.
+8. ✅ The block collapses to `# Act One ⋯` and its body lines are hidden.
+9. Click **▸** to expand *Act One*.
+10. ✅ The text is intact (folding never edits the document).
+11. Add `[[a multi-line note]]` across two lines (Screenplay) — it becomes a
+    foldable Note region; fold/expand it.
+12. ✅ The note can be folded; with **Syntax highlighting** on it is also colour-coded.
+13. Enable **Syntax highlighting** (**Cmd/Ctrl+Shift+H**).
+14. Open **Editor → Syntax theme** and switch between Minimal / Paper /
+    Writer Dark / Sublime-like Dark.
+15. ✅ Element colours change (scene headings, character, dialogue, notes, TODO…).
+16. Restart the app.
+17. ✅ The document content persists (and your tool toggles/theme are remembered).
+18. ✅ Any folded/hidden text is still present — folding is purely visual, so
+    nothing was deleted.
+
+> **Note:** fold state is remembered best-effort by block position; after heavy
+> edits a block may re-expand, but the text is never lost. The "Reset editor view"
+> button in the popover clears all aids + folds.
 
 ### Screenplay parser test (automated)
 
@@ -441,6 +479,12 @@ page handling + include-outline), **Document Settings** data-attributes,
 **Fountain export**, and the rough **page-count** approximation. Emphasis renders
 with the raw markers kept but dimmed.
 
+The **Nerd Mode editor tools** have their own pure suite
+(`npm run test:editor-tools`): line-number generation, foldable-region detection
+(heading nesting + screenplay Note/boneyard regions) and hidden-block computation,
+syntax classification (screenplay + novel/notes categories, inline tokens) and
+syntax-theme switching.
+
 ---
 
 ## Known limitations
@@ -461,6 +505,12 @@ with the raw markers kept but dimmed.
   the page count is a rough ~55-lines/page approximation, **not** industry
   pagination. Document Settings + view scale persist in **localStorage** (not in
   the backend document).
+- **Nerd Mode is optional + local.** Line numbers, current-line highlight,
+  folding, syntax highlighting and the typography overrides all default **off**
+  and persist in **localStorage** (key `logosforge-editor-tools`; folds in
+  `logosforge-folds`). Folding is visual-only — it never edits the document, so
+  hidden text is always saved. Line numbers are per-block (not per-wrapped-line),
+  and inline PSYKE references are a reserved token (no established syntax yet).
 - **Packaging is shell-only.** `npm run pack` packages the Electron shell; the
   Python backend is not yet bundled (dev launches it from `backend/`).
 

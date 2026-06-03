@@ -829,6 +829,181 @@ body {
   opacity: 0;
 }
 
+/* ===================== Nerd Mode editor tools (optional) ===================== */
+/* Everything here is gated by a data-* flag on the surface, so the default
+   Whiteboard is untouched until a writer turns a tool on. */
+
+.wb-statusline-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Gutter sizing: line numbers occupy the far-left zone, fold toggles a thin
+   zone just left of the text. Both default to 0 (no gutter, no shift). */
+.wb-editor {
+  --wb-gut-num: 0em;
+  --wb-gut-fold: 0em;
+  padding-left: calc(var(--wb-gut-num) + var(--wb-gut-fold));
+}
+.wb-surface[data-linenumbers='on'] .wb-editor {
+  --wb-gut-num: 3.2em;
+}
+.wb-surface[data-folding='on'] .wb-editor {
+  --wb-gut-fold: 1.4em;
+}
+.wb-surface[data-linenumbers='on'] .wb-editor > *,
+.wb-surface[data-folding='on'] .wb-editor > * {
+  position: relative;
+}
+
+/* Line numbers — subtle, monospaced, right-aligned in the left gutter. */
+.wb-surface[data-linenumbers='on'] .wb-editor [data-ln]::before {
+  content: attr(data-ln);
+  position: absolute;
+  top: 0;
+  left: calc(-1 * (var(--wb-gut-num) + var(--wb-gut-fold)));
+  width: calc(var(--wb-gut-num) - 0.6em);
+  text-align: right;
+  color: var(--paper-muted);
+  opacity: 0.5;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.74em;
+  line-height: inherit;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Current-line highlight — barely-there tint that reads in light + dark. */
+.wb-current-line {
+  background: rgba(127, 127, 127, 0.07);
+  border-radius: 3px;
+}
+
+/* Folding — hide bodies, mark collapsed heads, gutter toggle. */
+.wb-folded-hidden {
+  display: none !important;
+}
+.wb-fold-collapsed::after {
+  content: ' ⋯';
+  color: var(--paper-muted);
+  opacity: 0.75;
+}
+.wb-fold-toggle {
+  position: absolute;
+  top: 0;
+  left: calc(-1 * var(--wb-gut-fold));
+  width: var(--wb-gut-fold);
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  color: var(--paper-muted);
+  opacity: 0;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.8em;
+  line-height: inherit;
+  transition: opacity 0.12s ease;
+}
+.wb-fold-head:hover .wb-fold-toggle,
+.wb-fold-collapsed .wb-fold-toggle {
+  opacity: 0.65;
+}
+.wb-fold-toggle:hover {
+  opacity: 1;
+  color: var(--ink);
+}
+
+/* Syntax highlighting — colour layer keyed to the active theme's CSS vars.
+   The `.wb-editor` in the selector gives enough specificity to recolour the
+   screenplay element classes when syntax is on; OFF means no `wb-syn-*` exists. */
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-scene_heading,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-section,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-chapter,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-heading,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-subheading {
+  color: var(--syn-heading);
+}
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-character {
+  color: var(--syn-character);
+}
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-dialogue {
+  color: var(--syn-dialogue);
+}
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-transition,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-centered,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-bullet,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-checkbox,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-tag,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-psyke {
+  color: var(--syn-accent);
+}
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-synopsis,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-title_field,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-parenthetical,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-page_break {
+  color: var(--syn-muted);
+}
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-note,
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-boneyard {
+  color: var(--syn-comment);
+  font-style: italic;
+}
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-todo {
+  color: var(--syn-warn);
+  font-weight: 600;
+}
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-link {
+  color: var(--syn-link);
+  text-decoration: underline;
+}
+.wb-surface[data-syntax='on'] .wb-editor .wb-syn-emphasis {
+  color: var(--syn-emphasis);
+}
+
+/* Typography overrides (Editor Settings) — apply across all modes when set. */
+.wb-surface[data-editor-font='on'] .wb-editor {
+  font-size: calc(var(--wb-font-px) * var(--wb-scale));
+}
+.wb-surface[data-editor-lh='on'] .wb-editor {
+  line-height: var(--wb-line-height);
+}
+.wb-surface[data-editor-typeface='serif'] .wb-editor {
+  font-family: "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif;
+}
+.wb-surface[data-editor-typeface='mono'] .wb-editor {
+  font-family: "Courier Prime", "Courier New", "Courier", ui-monospace, monospace;
+}
+.wb-surface[data-editor-typeface='system'] .wb-editor {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Editor Settings popover extras. */
+.wb-settings kbd {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.82em;
+}
+.wb-reset {
+  margin-top: 2px;
+  padding: 5px 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.wb-reset:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
 /* ============================ Status bar ============================ */
 .statusbar {
   display: flex;

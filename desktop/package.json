@@ -15,8 +15,9 @@
     "preview": "npm run build && electron . --prod",
     "typecheck": "tsc -p tsconfig.electron.json --noEmit && tsc -p renderer/tsconfig.json --noEmit",
     "pack": "npm run build && electron-builder --dir",
-    "test": "npm run typecheck && npm run test:screenplay",
+    "test": "npm run typecheck && npm run test:screenplay && npm run test:editor-tools",
     "test:screenplay": "esbuild renderer/src/features/screenplay/screenplayTests.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/screenplay-test.mjs && node dist/screenplay-test.mjs",
+    "test:editor-tools": "esbuild renderer/src/features/editorTools/editorToolsTests.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/editor-tools-test.mjs && node dist/editor-tools-test.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
