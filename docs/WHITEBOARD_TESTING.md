@@ -140,10 +140,11 @@ engine and the Nerd Mode editor tools are pure and unit-tested:
 
 ```bash
 cd desktop
-npm test                 # typecheck + screenplay + editor-tools + files tests
+npm test                 # typecheck + screenplay + editor-tools + files + themes
 npm run test:screenplay  # just the Fountain parser/classifier tests
-npm run test:editor-tools # line numbers, folding, syntax classify, themes
+npm run test:editor-tools # line numbers, folding, syntax classify
 npm run test:files       # file <-> text serialization round-trips
+npm run test:themes      # theme palettes + readability invariant + custom derive
 npm run build            # verify the renderer bundles and electron compiles
 ```
 
@@ -488,6 +489,46 @@ the **Editor** button (right of the status line) or the shortcuts above.
 9. Press **Escape**.
 10. ✅ All UI returns.
 11. ✅ While in Focus Mode, **Cmd/Ctrl+K** still opens the Logos assistant.
+
+### ESC restore test
+1. Hide the top panel (**Cmd/Ctrl+Shift+T**).
+2. Hide the outline (**Cmd/Ctrl+Shift+O**).
+3. Enter Focus Mode (**Cmd/Ctrl+Shift+D**).
+4. Press **ESC**.
+5. ✅ The top panel returns.
+6. ✅ The outline returns.
+7. ✅ The status bar returns.
+8. ✅ The PSYKE button returns.
+9. ✅ The editor is still usable and your text is intact (ESC never deletes text
+   or breaks editor focus). `Cmd/Ctrl+K` is unaffected.
+
+> ESC is the "give everything back" key: it exits Focus Mode **and** restores any
+> individually-hidden panel. If a popover / PSYKE window / Logos box is open, the
+> first ESC closes that transient; the next ESC restores the panels.
+
+### Theme test
+1. Open the **Theme** selector (top-right of the title bar).
+2. Select **Paper White** → ✅ a calm parchment/white page with dark text.
+3. Select **Ink Black** → ✅ a low-glare black/charcoal page with off-white text.
+4. Select **Klein Blue** → ✅ deep blue applied everywhere (panels, editor, status
+   bar, buttons, selection, caret).
+5. Select **Ocher Gold** → ✅ dark archive chrome + warm parchment writing page.
+6. Select **Red Room** → ✅ a theatrical dark-red chrome with a readable cream
+   page — red used as accent, **not** an eye-burning text background.
+7. Select **Blue Bronze** → ✅ navy chrome + parchment page (cinematic).
+8. ✅ In every theme the editor text is high-contrast, muted labels are legible,
+   the caret and text selection are visible, and buttons are readable.
+9. Restart the app → ✅ the selected theme persisted.
+10. Enter Focus Mode in each theme → ✅ the bare page uses that theme's writing
+    surface; **ESC** restores the panels.
+
+### Custom theme test
+1. Open the Theme selector → choose **Custom** (custom colour rows appear).
+2. Change **Accent** → ✅ accents/caret/selection update live.
+3. Change **Editor background** → ✅ the writing surface updates (and editor ink
+   auto-adjusts for contrast).
+4. ✅ The UI updates immediately as you pick colours.
+5. Restart the app → ✅ the custom colours (and that Custom is selected) persist.
 
 > **Two clearly-separated states.** The subtle **Draft saved / Draft saving /
 > Draft error** label on the right is the *backend autosave/session* — it is NOT

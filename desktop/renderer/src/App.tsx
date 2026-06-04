@@ -8,7 +8,10 @@ import type { OutlineItem } from './features/outline/types';
 import { PsykeWindow } from './features/psyke/PsykeWindow';
 import { DEFAULT_BASE_URL } from './features/whiteboard/whiteboardApi';
 import { WhiteboardPage } from './features/whiteboard/WhiteboardPage';
-import { useTheme } from './theme';
+import { useUiVisibility } from './state/uiVisibilityStore';
+import { PREDEFINED_THEMES } from './styles/themes/predefinedThemes';
+import { ThemeSelector } from './styles/themes/ThemeSelector';
+import { useTheme } from './styles/themes/useTheme';
 
 function scrollToBlock(index: number) {
   const surface = document.querySelector('.wb-editor');
@@ -20,65 +23,44 @@ function currentSelectionText(): string {
   return window.getSelection()?.toString().trim() ?? '';
 }
 
-function loadBool(key: string, def: boolean): boolean {
-  try {
-    const v = localStorage.getItem(key);
-    if (v === '1') return true;
-    if (v === '0') return false;
-  } catch {
-    /* ignore */
-  }
-  return def;
-}
-function saveBool(key: string, v: boolean) {
-  try {
-    localStorage.setItem(key, v ? '1' : '0');
-  } catch {
-    /* ignore */
-  }
-}
-
 export function App() {
-  const [theme, toggleTheme] = useTheme();
+  const ui = useUiVisibility();
+  const { themeId, setThemeId } = useTheme();
   const [status, setStatus] = useState<BackendStatus>({
     state: 'connecting',
     baseUrl: '',
     managed: false,
   });
-  // Distraction-free UI preferences. Top-panel hidden + outline persist; Focus
-  // Mode is deliberately session-only (always starts off on a fresh launch).
-  const [outlineVisible, setOutlineVisible] = useState(() => loadBool('lf-outline', true));
-  const [topPanelHidden, setTopPanelHidden] = useState(() => loadBool('lf-top-hidden', false));
-  const [focusMode, setFocusMode] = useState(false);
   const [focusHint, setFocusHint] = useState(false);
   const [outlineItems, setOutlineItems] = useState<OutlineItem[]>([]);
   const [psykeOpen, setPsykeOpen] = useState(false);
   const [psykeQuery, setPsykeQuery] = useState('');
 
-  useEffect(() => saveBool('lf-outline', outlineVisible), [outlineVisible]);
-  useEffect(() => saveBool('lf-top-hidden', topPanelHidden), [topPanelHidden]);
-
   // Briefly show "press Esc to exit" when entering Focus Mode (no permanent UI).
   useEffect(() => {
-    if (!focusMode) {
+    if (!ui.focusModeActive) {
       setFocusHint(false);
       return;
     }
     setFocusHint(true);
     const t = setTimeout(() => setFocusHint(false), 2200);
     return () => clearTimeout(t);
-  }, [focusMode]);
+  }, [ui.focusModeActive]);
 
-  const toggleOutline = useCallback(() => setOutlineVisible((v) => !v), []);
-  const toggleTopPanel = useCallback(() => setTopPanelHidden((v) => !v), []);
-  const toggleFocus = useCallback(
-    () =>
-      setFocusMode((f) => {
-        if (!f) setPsykeOpen(false); // entering: drop floating chrome
-        return !f;
-      }),
-    [],
-  );
+  const toggleFocus = useCallback(() => {
+    if (ui.focusModeActive) {
+      ui.exitFocusMode();
+    } else {
+      setPsykeOpen(false); // entering: drop floating chrome
+      ui.enterFocusMode();
+    }
+  }, [ui]);
+
+  const cycleTheme = useCallback(() => {
+    const i = PREDEFINED_THEMES.findIndex((t) => t.id === themeId);
+    setThemeId(PREDEFINED_THEMES[(i + 1) % PREDEFINED_THEMES.length].id);
+  }, [themeId, setThemeId]);
+
   const togglePsyke = useCallback(
     () =>
       setPsykeOpen((o) => {
@@ -93,11 +75,25 @@ export function App() {
     setPsykeOpen(true);
   }, []);
 
-  // Hold the latest action handlers so the menu/keyboard listeners subscribe once.
-  const actionsRef = useRef({ toggleOutline, toggleTopPanel, toggleFocus, toggleTheme, togglePsyke });
-  actionsRef.current = { toggleOutline, toggleTopPanel, toggleFocus, toggleTheme, togglePsyke };
-  const focusRef = useRef(focusMode);
-  focusRef.current = focusMode;
+  // Hold latest handlers so the menu/keyboard listeners subscribe once.
+  const actionsRef = useRef({
+    toggleOutline: ui.toggleOutline,
+    toggleTopPanel: ui.toggleTopPanel,
+    toggleFocus,
+    cycleTheme,
+    togglePsyke,
+    handleEscape: ui.handleEscape,
+  });
+  actionsRef.current = {
+    toggleOutline: ui.toggleOutline,
+    toggleTopPanel: ui.toggleTopPanel,
+    toggleFocus,
+    cycleTheme,
+    togglePsyke,
+    handleEscape: ui.handleEscape,
+  };
+  const psykeOpenRef = useRef(psykeOpen);
+  psykeOpenRef.current = psykeOpen;
 
   useEffect(() => {
     let active = true;
@@ -111,8 +107,7 @@ export function App() {
     };
   }, []);
 
-  // Native View-menu actions (mouse clicks). The matching shortcuts are handled
-  // in the keydown listener below (the menu items use registerAccelerator:false).
+  // Native View-menu actions (mouse clicks). Matching shortcuts are handled below.
   useEffect(
     () =>
       onMenuView((action) => {
@@ -120,25 +115,37 @@ export function App() {
         if (action === 'toggleTopPanel') a.toggleTopPanel();
         else if (action === 'toggleOutline') a.toggleOutline();
         else if (action === 'focusMode') a.toggleFocus();
-        else if (action === 'toggleTheme') a.toggleTheme();
+        else if (action === 'toggleTheme') a.cycleTheme();
       }),
     [],
   );
 
-  // Global view shortcuts. (File ops use native menu accelerators; Logos keeps
-  // Ctrl/Cmd+K; Focus Mode uses Ctrl/Cmd+Shift+D because Shift+F is folding.)
+  // Global view shortcuts + ESC restore. (Cmd/Ctrl+K stays Logos; never bound here.)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const a = actionsRef.current;
       if (e.key === 'Escape') {
-        if (focusRef.current) {
-          e.preventDefault();
-          setFocusMode(false);
+        const ae = document.activeElement as HTMLElement | null;
+        // Let a focused transient (popover/menu/PSYKE/Logos/input) handle ESC first.
+        if (
+          ae &&
+          (ae.closest('.wb-popover') ||
+            ae.closest('.psyke-window') ||
+            ae.closest('.logos-box') ||
+            /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))
+        ) {
+          return;
         }
+        if (psykeOpenRef.current) {
+          e.preventDefault();
+          setPsykeOpen(false); // close the PSYKE window (a transient) first
+          return;
+        }
+        if (a.handleEscape()) e.preventDefault(); // restore hidden panels / exit focus
         return;
       }
       const mod = e.metaKey || e.ctrlKey;
       if (!mod || !e.shiftKey || e.altKey) return;
-      const a = actionsRef.current;
       if (e.code === 'KeyO') {
         e.preventDefault();
         a.toggleOutline();
@@ -159,16 +166,16 @@ export function App() {
 
   const baseUrl = status.baseUrl || DEFAULT_BASE_URL;
   const ready = status.state === 'connected';
-  const appClass = `app${topPanelHidden ? ' is-top-hidden' : ''}${focusMode ? ' is-focus' : ''}`;
+  const appClass = `app${ui.topPanelVisible ? '' : ' is-top-hidden'}${ui.focusModeActive ? ' is-focus' : ''}`;
 
   return (
     <div className={appClass}>
       <header className="titlebar">
         <button
           type="button"
-          className={`icon-toggle${outlineVisible ? ' is-active' : ''}`}
-          onClick={toggleOutline}
-          aria-pressed={outlineVisible}
+          className={`icon-toggle${ui.outlineVisible ? ' is-active' : ''}`}
+          onClick={ui.toggleOutline}
+          aria-pressed={ui.outlineVisible}
           title="Toggle Outline (Ctrl/Cmd+Shift+O)"
         >
           ☰
@@ -179,7 +186,7 @@ export function App() {
             type="button"
             className="icon-toggle"
             onClick={toggleFocus}
-            title="Focus Mode (Ctrl/Cmd+Shift+D)"
+            title="Focus Mode (Ctrl/Cmd+Shift+D · Esc restores)"
             aria-label="Enter Focus Mode"
           >
             ◌
@@ -187,34 +194,28 @@ export function App() {
           <button
             type="button"
             className="icon-toggle"
-            onClick={toggleTopPanel}
-            title="Hide top panel (Ctrl/Cmd+Shift+T)"
+            onClick={ui.toggleTopPanel}
+            title="Hide top panel (Ctrl/Cmd+Shift+T · Esc restores)"
             aria-label="Hide top panel"
           >
             ▲
           </button>
-          <button
-            type="button"
-            className="icon-toggle"
-            onClick={toggleTheme}
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? '☾' : '☀'}
-          </button>
-          <button
-            type="button"
-            className={`psyke-toggle${psykeOpen ? ' is-active' : ''}`}
-            onClick={() => (psykeOpen ? setPsykeOpen(false) : openPsyke())}
-            aria-pressed={psykeOpen}
-            title="Toggle PSYKE (Ctrl/Cmd+Shift+P)"
-          >
-            PSYKE
-          </button>
+          <ThemeSelector />
+          {ui.psykeButtonVisible && (
+            <button
+              type="button"
+              className={`psyke-toggle${psykeOpen ? ' is-active' : ''}`}
+              onClick={() => (psykeOpen ? setPsykeOpen(false) : openPsyke())}
+              aria-pressed={psykeOpen}
+              title="Toggle PSYKE (Ctrl/Cmd+Shift+P)"
+            >
+              PSYKE
+            </button>
+          )}
         </div>
       </header>
       <div className="workarea">
-        {outlineVisible && (
+        {ui.outlineVisible && (
           <OutlinePanel items={outlineItems} onNavigate={(item) => scrollToBlock(item.blockIndex)} />
         )}
         <WhiteboardPage baseUrl={baseUrl} ready={ready} onOutlineChange={setOutlineItems} />
@@ -222,7 +223,7 @@ export function App() {
       {psykeOpen && (
         <PsykeWindow baseUrl={baseUrl} initialQuery={psykeQuery} onClose={() => setPsykeOpen(false)} />
       )}
-      <StatusBar status={status} />
+      {ui.statusBarVisible && <StatusBar status={status} />}
       {focusHint && <div className="focus-hint">Focus Mode — press Esc to exit</div>}
     </div>
   );
