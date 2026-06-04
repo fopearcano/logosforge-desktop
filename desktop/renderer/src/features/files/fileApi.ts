@@ -1,36 +1,38 @@
 /**
- * Typed access to the Electron file bridge. Resolved LAZILY from
- * `window.logosforge` on each call (never captured at module-load), so it is
- * robust to preload/init ordering, and degrades to a safe error result in a
- * plain browser (Vite dev) where there is no native bridge.
- *
- * Includes diagnostic logging (DevTools console) so the renderer→preload→main
- * chain can be traced when dialogs misbehave.
+ * Typed access to the Electron file bridge. The preload exposes FLAT top-level
+ * functions (a nested object was being dropped by contextBridge in the sandbox);
+ * here we resolve them lazily from `window.logosforge` and re-compose the
+ * `fileApi` façade the rest of the renderer uses. Degrades to a safe error
+ * result in a plain browser (no native bridge).
  */
 
 import type { FilesBridge } from './fileTypes';
 
-interface Bridge {
-  files?: FilesBridge;
+interface FlatBridge {
+  fileOpen?: FilesBridge['open'];
+  fileSaveAs?: FilesBridge['saveAs'];
+  fileSaveToPath?: FilesBridge['saveToPath'];
+  fileConfirmSaveChanges?: FilesBridge['confirmSaveChanges'];
+  fileSetDirty?: FilesBridge['setDirty'];
+  fileOnSaveBeforeClose?: FilesBridge['onSaveBeforeClose'];
+  fileSendCloseResult?: FilesBridge['sendCloseResult'];
   onMenuFile?(cb: (action: string) => void): () => void;
   onMenuView?(cb: (action: string) => void): () => void;
 }
 
-function lf(): Bridge | undefined {
+function lf(): FlatBridge | undefined {
   if (typeof window === 'undefined') return undefined;
-  return (window as unknown as { logosforge?: Bridge }).logosforge;
-}
-function files(): FilesBridge | undefined {
-  return lf()?.files;
+  return (window as unknown as { logosforge?: FlatBridge }).logosforge;
 }
 
-export const filesAvailable = (): boolean => !!files();
+export const filesAvailable = (): boolean => typeof lf()?.fileOpen === 'function';
 
-// One-time startup diagnostic: shows whether the native bridge reached the page.
+// One-time startup diagnostic — shows exactly what the bridge exposed.
 console.log(
-  '[files] bridge available:',
-  filesAvailable(),
-  filesAvailable() ? Object.keys(files() as object) : '(running without Electron bridge)',
+  '[files] bridge:',
+  lf() ? Object.keys(lf() as object) : '(no window.logosforge)',
+  '| fileOpen:',
+  typeof lf()?.fileOpen,
 );
 
 const NO_BRIDGE = 'File system unavailable — the app is not running inside Electron.';
@@ -38,20 +40,20 @@ const NO_BRIDGE = 'File system unavailable — the app is not running inside Ele
 export const fileApi: FilesBridge = {
   open: () => {
     console.log('[files] open() called');
-    return files()?.open() ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
+    return lf()?.fileOpen?.() ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
   },
   saveAs: (content, suggestedName) => {
     console.log('[files] saveAs() called', suggestedName);
-    return files()?.saveAs(content, suggestedName) ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
+    return lf()?.fileSaveAs?.(content, suggestedName) ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
   },
   saveToPath: (filePath, content) => {
     console.log('[files] saveToPath() called', filePath);
-    return files()?.saveToPath(filePath, content) ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
+    return lf()?.fileSaveToPath?.(filePath, content) ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
   },
-  confirmSaveChanges: (reason) => files()?.confirmSaveChanges(reason) ?? Promise.resolve('dont-save'),
-  setDirty: (dirty) => files()?.setDirty(dirty),
-  onSaveBeforeClose: (cb) => files()?.onSaveBeforeClose(cb) ?? (() => {}),
-  sendCloseResult: (ok) => files()?.sendCloseResult(ok),
+  confirmSaveChanges: (reason) => lf()?.fileConfirmSaveChanges?.(reason) ?? Promise.resolve('dont-save'),
+  setDirty: (dirty) => lf()?.fileSetDirty?.(dirty),
+  onSaveBeforeClose: (cb) => lf()?.fileOnSaveBeforeClose?.(cb) ?? (() => {}),
+  sendCloseResult: (ok) => lf()?.fileSendCloseResult?.(ok),
 };
 
 export function onMenuFile(cb: (action: string) => void): () => void {

@@ -633,9 +633,10 @@ showSaveDialog`. Every hop logs, so you can see exactly where it breaks:
 - Open the running app's **DevTools** (View → Toggle Developer Tools) and the
   **terminal** running `npm run dev`.
 - On launch, DevTools should show
-  `[preload] logosforge bridge exposed …` and `[files] bridge available: true …`.
-  - If `bridge available: false`, the page is not getting the preload — make sure
-    you are using the **Electron window**, not a Chrome tab at
+  `[preload] logosforge exposed (flat) keys: …` and
+  `[files] bridge: [ … fileOpen … ] | fileOpen: function`.
+  - If `fileOpen: undefined`, the page is not getting the preload — make sure you
+    are using the **Electron window**, not a Chrome tab at
     `http://localhost:5173`. File dialogs only exist inside Electron.
 - Click **File → Open**. Expected, in order:
   - DevTools: `[files] menu action: open` (native menu) or `[files] open() called`
@@ -649,8 +650,10 @@ showSaveDialog`. Every hop logs, so you can see exactly where it breaks:
 - If you see `[files] open dialog requested` but **no** dialog, the issue is the
   native dialog itself (window focus / sheet) — confirm the main window is
   focused and not minimized.
-- Quick sanity check: in the DevTools console run `window.logosforge.files` — it
-  should be an object with `open`, `saveAs`, `saveToPath`, `confirmSaveChanges`.
+- Quick sanity check: in the DevTools console run `window.logosforge` — it should
+  be an object whose keys include `fileOpen`, `fileSaveAs`, `fileSaveToPath`,
+  `fileConfirmSaveChanges`. (The bridge is intentionally **flat** — a nested
+  `files` object was being dropped by contextBridge in the sandboxed renderer.)
 
 **Backend port already in use** (`[Errno 98] address already in use`)
 - Another process holds `8777`. Use a different port:
