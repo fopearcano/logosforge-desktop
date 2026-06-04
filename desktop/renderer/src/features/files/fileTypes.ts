@@ -1,29 +1,31 @@
 /** Shared types for desktop file management (renderer side). */
 
 export type FileStatus = 'saved' | 'unsaved' | 'saving' | 'error';
-export type UnsavedChoice = 'save' | 'dont-save' | 'cancel';
+export type SaveChoice = 'save' | 'dont-save' | 'cancel';
 
-export interface OpenedDoc {
-  path: string;
-  content: string;
-}
-export interface SaveResult {
+export interface OpenResult {
   ok: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  fileName?: string;
+  content?: string;
   error?: string;
 }
-export interface SaveAsResult {
-  path: string;
+
+export interface SaveResult {
+  ok: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  fileName?: string;
   error?: string;
 }
 
 /** The file IPC surface exposed by the Electron preload bridge. */
 export interface FilesBridge {
-  open(): Promise<OpenedDoc | null>;
-  openPath(p: string): Promise<OpenedDoc | null>;
-  save(p: string, content: string): Promise<SaveResult>;
-  saveAs(suggestedName: string, content: string): Promise<SaveAsResult | null>;
-  confirmUnsaved(message?: string): Promise<UnsavedChoice>;
-  getRecent(): Promise<string[]>;
+  open(): Promise<OpenResult>;
+  saveAs(content: string, suggestedName: string): Promise<SaveResult>;
+  saveToPath(filePath: string, content: string): Promise<SaveResult>;
+  confirmSaveChanges(reason?: string): Promise<SaveChoice>;
   setDirty(dirty: boolean): void;
   onSaveBeforeClose(cb: () => void): () => void;
   sendCloseResult(ok: boolean): void;

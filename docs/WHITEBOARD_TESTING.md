@@ -624,6 +624,34 @@ syntax-theme switching.
 
 ## Troubleshooting
 
+**Open / Save dialogs do not appear (no Finder window)**
+
+The chain is: native/in-app **File action** → `window.logosforge.files.*` (preload)
+→ `ipcRenderer.invoke` → `ipcMain.handle` (main) → `dialog.showOpenDialog /
+showSaveDialog`. Every hop logs, so you can see exactly where it breaks:
+
+- Open the running app's **DevTools** (View → Toggle Developer Tools) and the
+  **terminal** running `npm run dev`.
+- On launch, DevTools should show
+  `[preload] logosforge bridge exposed …` and `[files] bridge available: true …`.
+  - If `bridge available: false`, the page is not getting the preload — make sure
+    you are using the **Electron window**, not a Chrome tab at
+    `http://localhost:5173`. File dialogs only exist inside Electron.
+- Click **File → Open**. Expected, in order:
+  - DevTools: `[files] menu action: open` (native menu) or `[files] open() called`
+    (in-app), then
+  - terminal: `[menu] open clicked` (native menu only) → `[ipc] file:open-dialog`
+    → `[files] open dialog requested` → the Finder dialog → `[files] open dialog result …`.
+- If you see `[files] open() called` but **no** `[ipc] file:open-dialog`, the
+  preload bridge isn't reaching main — verify `ipcMain` handlers are registered
+  (`registerFileIpc`) and that the channel names match (`file:open-dialog`,
+  `file:save-dialog`, `file:save-to-path`, `file:confirm-save-changes`).
+- If you see `[files] open dialog requested` but **no** dialog, the issue is the
+  native dialog itself (window focus / sheet) — confirm the main window is
+  focused and not minimized.
+- Quick sanity check: in the DevTools console run `window.logosforge.files` — it
+  should be an object with `open`, `saveAs`, `saveToPath`, `confirmSaveChanges`.
+
 **Backend port already in use** (`[Errno 98] address already in use`)
 - Another process holds `8777`. Use a different port:
   `LOGOSFORGE_PORT=8780 scripts/run-backend.sh` (and the same for `npm run smoke`).

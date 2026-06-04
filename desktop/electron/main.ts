@@ -2,7 +2,12 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'node:path';
 
 import { BackendManager, type BackendStatus } from './backend-manager';
-import { confirmSavePrompt, getRecents, initRecents, registerFileIpc } from './file-manager';
+import {
+  confirmSaveChanges,
+  openFileDialog,
+  saveFileDialog,
+  saveFileToPath,
+} from './file-manager';
 import { setAppMenu } from './menu';
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL ?? 'http://localhost:5173';
@@ -18,7 +23,6 @@ let isQuitting = false; // a real quit (Cmd/Ctrl+Q) is underway, not just a wind
 let closePromptOpen = false; // guard against duplicate prompts
 let pendingSave: ((ok: boolean) => void) | null = null;
 
-/** Ask the renderer to save (it may show Save As); resolves with success. */
 function requestRendererSave(): Promise<boolean> {
   const win = mainWindow;
   if (!win) return Promise.resolve(true);
@@ -28,12 +32,12 @@ function requestRendererSave(): Promise<boolean> {
   });
 }
 
-/** Run the save prompt; close (or resume quit) only if the user proceeds. */
 async function handleCloseRequest(): Promise<void> {
   const win = mainWindow;
   if (!win || closePromptOpen) return;
   closePromptOpen = true;
-  const choice = await confirmSavePrompt(win, 'Save changes before closing?');
+  console.log('[close] document is dirty — prompting');
+  const choice = await confirmSaveChanges(win, 'Save changes before closing?');
   let proceed = choice === 'dont-save';
   if (choice === 'save') proceed = await requestRendererSave();
   closePromptOpen = false;
@@ -48,7 +52,6 @@ async function handleCloseRequest(): Promise<void> {
 }
 
 function createWindow(): void {
-  // A fresh window starts clean + closable (the renderer re-reports dirty state).
   allowClose = false;
   isDirty = false;
 
@@ -86,13 +89,27 @@ function createWindow(): void {
   });
 }
 
-app.whenReady().then(() => {
-  ipcMain.handle('backend:get-status', () => backend.getStatus());
-  backend.onStatus((status: BackendStatus) => {
-    mainWindow?.webContents.send('backend:status', status);
+function registerFileIpc(): void {
+  ipcMain.handle('file:open-dialog', () => {
+    console.log('[ipc] file:open-dialog');
+    return openFileDialog(mainWindow);
+  });
+  ipcMain.handle(
+    'file:save-dialog',
+    (_e, payload: { content: string; currentPath?: string | null; suggestedName: string }) => {
+      console.log('[ipc] file:save-dialog');
+      return saveFileDialog(mainWindow, payload.content, payload.currentPath ?? null, payload.suggestedName);
+    },
+  );
+  ipcMain.handle('file:save-to-path', (_e, payload: { filePath: string; content: string }) => {
+    console.log('[ipc] file:save-to-path');
+    return saveFileToPath(payload.filePath, payload.content);
+  });
+  ipcMain.handle('file:confirm-save-changes', (_e, payload: { reason?: string }) => {
+    console.log('[ipc] file:confirm-save-changes');
+    return confirmSaveChanges(mainWindow, payload?.reason);
   });
 
-  // Renderer → main: dirty state, and the save-before-close result.
   ipcMain.on('file:set-dirty', (_e, dirty: boolean) => {
     isDirty = !!dirty;
   });
@@ -101,11 +118,16 @@ app.whenReady().then(() => {
     pendingSave = null;
     resolve?.(!!ok);
   });
+}
 
-  // File management (native dialogs + disk IO) and the native menu.
-  registerFileIpc(() => mainWindow);
-  setAppMenu({ getWindow: () => mainWindow, recents: getRecents() });
-  initRecents((recents) => setAppMenu({ getWindow: () => mainWindow, recents }));
+app.whenReady().then(() => {
+  ipcMain.handle('backend:get-status', () => backend.getStatus());
+  backend.onStatus((status: BackendStatus) => {
+    mainWindow?.webContents.send('backend:status', status);
+  });
+
+  registerFileIpc();
+  setAppMenu({ getWindow: () => mainWindow });
 
   createWindow();
   void backend.start();

@@ -1,158 +1,115 @@
 /**
- * Main-process file management: native open/save dialogs, disk read/write, an
- * unsaved-changes prompt, and a small recent-files store. The renderer never
- * touches the filesystem — it goes through these IPC handlers (contextIsolation
- * + sandbox stay on).
- *
- * Relationship to backend autosave: the backend keeps the live session draft
- * (autosave); these handlers write/read user-chosen files on disk. Opening a
- * file loads its text into the editor, which then autosaves to the backend too.
+ * Main-process file manager. ALL native dialogs + filesystem IO live here (the
+ * renderer reaches these only through secure IPC). Every entry point logs so the
+ * full chain can be traced from the terminal that runs `npm run dev`.
  */
 
-import { BrowserWindow, dialog, ipcMain, app } from 'electron';
+import { BrowserWindow, dialog } from 'electron';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 
-const MAX_RECENTS = 8;
-const recentsFile = () => path.join(app.getPath('userData'), 'recent-files.json');
+export interface OpenResult {
+  ok: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  fileName?: string;
+  content?: string;
+  error?: string;
+}
 
-// Save dialog: one filter per writable format (the first is the default).
-const SAVE_FILTERS = [
-  { name: 'Fountain Screenplay', extensions: ['fountain'] },
-  { name: 'Markdown', extensions: ['md'] },
-  { name: 'Plain Text', extensions: ['txt'] },
-  { name: 'LogosForge', extensions: ['logosforge'] },
-];
+export interface SaveResult {
+  ok: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  fileName?: string;
+  error?: string;
+}
+
+export type SaveChoice = 'save' | 'dont-save' | 'cancel';
+
 const OPEN_FILTERS = [
-  { name: 'Whiteboard Documents', extensions: ['fountain', 'txt', 'md', 'logosforge'] },
+  { name: 'Writing Files', extensions: ['fountain', 'txt', 'md', 'logosforge', 'logforge'] },
   { name: 'All Files', extensions: ['*'] },
 ];
+const SAVE_FILTERS = [
+  { name: 'Fountain', extensions: ['fountain'] },
+  { name: 'Markdown', extensions: ['md'] },
+  { name: 'Text', extensions: ['txt'] },
+  { name: 'LogosForge', extensions: ['logosforge'] },
+];
 
-let recents: string[] = [];
-let notifyRecents: (r: string[]) => void = () => {};
-
-export interface OpenedDoc {
-  path: string;
-  content: string;
-}
-
-export function getRecents(): string[] {
-  return recents;
-}
-
-/** Load persisted recents and subscribe to changes (used to rebuild the menu). */
-export function initRecents(onChange: (r: string[]) => void): void {
-  notifyRecents = onChange;
-  fs.readFile(recentsFile(), 'utf8')
-    .then((raw) => {
-      const parsed = JSON.parse(raw) as unknown;
-      recents = Array.isArray(parsed) ? parsed.filter((p): p is string => typeof p === 'string') : [];
-      notifyRecents(recents);
-    })
-    .catch(() => {
-      recents = [];
-    });
-}
-
-async function persistRecents(): Promise<void> {
+/** Read a file from disk into a structured result. */
+export async function readFileFromPath(filePath: string): Promise<OpenResult> {
   try {
-    await fs.writeFile(recentsFile(), JSON.stringify(recents), 'utf8');
-  } catch {
-    /* best effort */
+    const content = await fs.readFile(filePath, 'utf8');
+    return { ok: true, canceled: false, filePath, fileName: path.basename(filePath), content };
+  } catch (err) {
+    console.error('[files] read error:', err);
+    return { ok: false, error: String(err) };
   }
 }
 
-async function addRecent(p: string): Promise<void> {
-  recents = [p, ...recents.filter((x) => x !== p)].slice(0, MAX_RECENTS);
-  notifyRecents(recents);
-  await persistRecents();
-}
-
-export async function clearRecents(): Promise<void> {
-  recents = [];
-  notifyRecents(recents);
-  await persistRecents();
-}
-
-async function readDoc(p: string): Promise<OpenedDoc | null> {
+/** Write content to a known path. */
+export async function saveFileToPath(filePath: string, content: string): Promise<SaveResult> {
+  console.log('[files] save to path:', filePath);
   try {
-    const content = await fs.readFile(p, 'utf8');
-    await addRecent(p);
-    return { path: p, content };
-  } catch {
-    return null;
+    await fs.writeFile(filePath, content, 'utf8');
+    return { ok: true, canceled: false, filePath, fileName: path.basename(filePath) };
+  } catch (err) {
+    console.error('[files] save to path error:', err);
+    return { ok: false, error: String(err) };
   }
 }
 
-export type UnsavedChoice = 'save' | 'dont-save' | 'cancel';
+/** Native Open dialog → read the chosen file. */
+export async function openFileDialog(win: BrowserWindow | null): Promise<OpenResult> {
+  console.log('[files] open dialog requested');
+  try {
+    const options = { properties: ['openFile' as const], filters: OPEN_FILTERS };
+    const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
+    console.log('[files] open dialog result:', res.canceled ? 'canceled' : res.filePaths[0]);
+    if (res.canceled || res.filePaths.length === 0) return { ok: true, canceled: true };
+    return readFileFromPath(res.filePaths[0]);
+  } catch (err) {
+    console.error('[files] open dialog error:', err);
+    return { ok: false, error: String(err) };
+  }
+}
 
-/** Native 3-button save prompt (shared by the New/Open flow and the close guard). */
-export async function confirmSavePrompt(win: BrowserWindow, message: string): Promise<UnsavedChoice> {
-  const res = await dialog.showMessageBox(win, {
-    type: 'warning',
+/** Native Save dialog → write content to the chosen path. */
+export async function saveFileDialog(
+  win: BrowserWindow | null,
+  content: string,
+  currentPath: string | null,
+  suggestedName: string,
+): Promise<SaveResult> {
+  console.log('[files] save dialog requested');
+  try {
+    const options = { defaultPath: currentPath ?? suggestedName, filters: SAVE_FILTERS };
+    const res = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
+    console.log('[files] save dialog result:', res.canceled ? 'canceled' : res.filePath);
+    if (res.canceled || !res.filePath) return { ok: true, canceled: true };
+    return saveFileToPath(res.filePath, content);
+  } catch (err) {
+    console.error('[files] save dialog error:', err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+/** Native "Save changes?" 3-button prompt. */
+export async function confirmSaveChanges(
+  win: BrowserWindow | null,
+  reason?: string,
+): Promise<SaveChoice> {
+  const options = {
+    type: 'warning' as const,
     buttons: ['Save', "Don't Save", 'Cancel'],
     defaultId: 0,
     cancelId: 2,
     noLink: true,
-    message,
+    message: reason || 'Save changes before closing?',
     detail: 'Your document has unsaved changes.',
-  });
+  };
+  const res = win ? await dialog.showMessageBox(win, options) : await dialog.showMessageBox(options);
   return res.response === 0 ? 'save' : res.response === 1 ? 'dont-save' : 'cancel';
-}
-
-/** Register the file IPC handlers. `getWindow` returns the active window. */
-export function registerFileIpc(getWindow: () => BrowserWindow | null): void {
-  ipcMain.handle('file:open', async (): Promise<OpenedDoc | null> => {
-    const win = getWindow();
-    if (!win) return null;
-    const res = await dialog.showOpenDialog(win, {
-      title: 'Open Document',
-      properties: ['openFile'],
-      filters: OPEN_FILTERS,
-    });
-    if (res.canceled || res.filePaths.length === 0) return null;
-    return readDoc(res.filePaths[0]);
-  });
-
-  ipcMain.handle('file:open-path', async (_e, p: string): Promise<OpenedDoc | null> => readDoc(p));
-
-  ipcMain.handle('file:save', async (_e, p: string, content: string) => {
-    try {
-      await fs.writeFile(p, content, 'utf8');
-      await addRecent(p);
-      return { ok: true as const };
-    } catch (err) {
-      return { ok: false as const, error: String(err) };
-    }
-  });
-
-  ipcMain.handle('file:save-as', async (_e, suggestedName: string, content: string) => {
-    const win = getWindow();
-    if (!win) return null;
-    const res = await dialog.showSaveDialog(win, {
-      title: 'Save Document As',
-      defaultPath: suggestedName,
-      filters: SAVE_FILTERS,
-    });
-    if (res.canceled || !res.filePath) return null;
-    try {
-      await fs.writeFile(res.filePath, content, 'utf8');
-      await addRecent(res.filePath);
-      return { path: res.filePath };
-    } catch (err) {
-      return { path: '', error: String(err) };
-    }
-  });
-
-  ipcMain.handle('file:confirm-unsaved', async (_e, message?: string): Promise<UnsavedChoice> => {
-    const win = getWindow();
-    if (!win) return 'dont-save';
-    return confirmSavePrompt(win, message ?? 'Save changes before continuing?');
-  });
-
-  ipcMain.handle('file:get-recent', () => recents);
-  ipcMain.handle('file:clear-recent', async () => {
-    await clearRecents();
-    return recents;
-  });
 }

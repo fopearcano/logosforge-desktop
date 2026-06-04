@@ -1,8 +1,11 @@
 /**
  * Typed access to the Electron file bridge. Resolved LAZILY from
  * `window.logosforge` on each call (never captured at module-load), so it is
- * robust to preload/init ordering, and degrades to a safe no-op in a plain
- * browser (Vite dev) where there is no native bridge.
+ * robust to preload/init ordering, and degrades to a safe error result in a
+ * plain browser (Vite dev) where there is no native bridge.
+ *
+ * Includes diagnostic logging (DevTools console) so the renderer→preload→main
+ * chain can be traced when dialogs misbehave.
  */
 
 import type { FilesBridge } from './fileTypes';
@@ -11,10 +14,10 @@ interface Bridge {
   files?: FilesBridge;
   onMenuFile?(cb: (action: string) => void): () => void;
   onMenuView?(cb: (action: string) => void): () => void;
-  onMenuOpenRecent?(cb: (p: string) => void): () => void;
 }
 
 function lf(): Bridge | undefined {
+  if (typeof window === 'undefined') return undefined;
   return (window as unknown as { logosforge?: Bridge }).logosforge;
 }
 function files(): FilesBridge | undefined {
@@ -23,16 +26,29 @@ function files(): FilesBridge | undefined {
 
 export const filesAvailable = (): boolean => !!files();
 
-/** Stable façade — each method resolves the live bridge when invoked. */
+// One-time startup diagnostic: shows whether the native bridge reached the page.
+console.log(
+  '[files] bridge available:',
+  filesAvailable(),
+  filesAvailable() ? Object.keys(files() as object) : '(running without Electron bridge)',
+);
+
+const NO_BRIDGE = 'File system unavailable — the app is not running inside Electron.';
+
 export const fileApi: FilesBridge = {
-  open: () => files()?.open() ?? Promise.resolve(null),
-  openPath: (p) => files()?.openPath(p) ?? Promise.resolve(null),
-  save: (p, content) =>
-    files()?.save(p, content) ??
-    Promise.resolve({ ok: false, error: 'File system unavailable (not running in Electron).' }),
-  saveAs: (suggestedName, content) => files()?.saveAs(suggestedName, content) ?? Promise.resolve(null),
-  confirmUnsaved: (message) => files()?.confirmUnsaved(message) ?? Promise.resolve('dont-save'),
-  getRecent: () => files()?.getRecent() ?? Promise.resolve([]),
+  open: () => {
+    console.log('[files] open() called');
+    return files()?.open() ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
+  },
+  saveAs: (content, suggestedName) => {
+    console.log('[files] saveAs() called', suggestedName);
+    return files()?.saveAs(content, suggestedName) ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
+  },
+  saveToPath: (filePath, content) => {
+    console.log('[files] saveToPath() called', filePath);
+    return files()?.saveToPath(filePath, content) ?? Promise.resolve({ ok: false, error: NO_BRIDGE });
+  },
+  confirmSaveChanges: (reason) => files()?.confirmSaveChanges(reason) ?? Promise.resolve('dont-save'),
   setDirty: (dirty) => files()?.setDirty(dirty),
   onSaveBeforeClose: (cb) => files()?.onSaveBeforeClose(cb) ?? (() => {}),
   sendCloseResult: (ok) => files()?.sendCloseResult(ok),
@@ -43,7 +59,4 @@ export function onMenuFile(cb: (action: string) => void): () => void {
 }
 export function onMenuView(cb: (action: string) => void): () => void {
   return lf()?.onMenuView?.(cb) ?? (() => {});
-}
-export function onMenuOpenRecent(cb: (p: string) => void): () => void {
-  return lf()?.onMenuOpenRecent?.(cb) ?? (() => {});
 }

@@ -1,17 +1,14 @@
 /**
  * Desktop document file actions: current file path, dirty flag, save status, and
- * New / Open / Save / Save As (wired to the native File menu + the in-app File
- * menu). Backend autosave keeps the live session; these write user-chosen files.
- *
- * Dirty tracking is independent of autosave: the document stays dirty until it is
- * saved to a user file. The dirty flag is mirrored to the main process so the
- * window-close / quit guard can prompt to save (see electron/main.ts).
+ * New / Open / Save / Save As. The native File menu and the in-app File dropdown
+ * both call THIS one pathway. Backend autosave keeps the session; these write the
+ * user-chosen file. A document stays dirty until an explicit file Save/Open/New.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { WhiteboardBlock } from '../whiteboard/types';
-import { fileApi, onMenuFile, onMenuOpenRecent } from './fileApi';
+import { fileApi, onMenuFile } from './fileApi';
 import { baseName, blocksToText, suggestedFileName, textToBlocks } from './fileSerialize';
 import type { FileStatus } from './fileTypes';
 
@@ -77,23 +74,26 @@ export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileAc
 
   const doSaveAs = useCallback(async (): Promise<boolean> => {
     try {
-      const text = blocksToText(getBlocksRef.current());
       setStatus('saving');
-      const res = await fileApi.saveAs(suggestedFileName(filePathRef.current, modeRef.current), text);
-      if (!res) {
-        setStatus(dirtyRef.current ? 'unsaved' : 'saved'); // cancelled
+      const res = await fileApi.saveAs(
+        blocksToText(getBlocksRef.current()),
+        suggestedFileName(filePathRef.current, modeRef.current),
+      );
+      if (res.canceled) {
+        setStatus(dirtyRef.current ? 'unsaved' : 'saved');
         return false;
       }
-      if (res.error) {
+      if (!res.ok) {
         setStatus('error');
         return false;
       }
-      setFilePath(res.path);
+      setFilePath(res.filePath ?? null);
       setDirty(false);
       setStatus('saved');
       return true;
-    } catch {
-      setStatus('error'); // surface failures instead of failing silently
+    } catch (err) {
+      console.error('[files] saveAs failed:', err);
+      setStatus('error');
       return false;
     }
   }, []);
@@ -103,7 +103,7 @@ export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileAc
     if (!path) return doSaveAs();
     try {
       setStatus('saving');
-      const res = await fileApi.save(path, blocksToText(getBlocksRef.current()));
+      const res = await fileApi.saveToPath(path, blocksToText(getBlocksRef.current()));
       if (!res.ok) {
         setStatus('error');
         return false;
@@ -111,7 +111,8 @@ export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileAc
       setDirty(false);
       setStatus('saved');
       return true;
-    } catch {
+    } catch (err) {
+      console.error('[files] save failed:', err);
       setStatus('error');
       return false;
     }
@@ -119,9 +120,9 @@ export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileAc
 
   // If there are unsaved changes, ask; returns false to abort the operation.
   const confirmProceed = useCallback(
-    async (message: string): Promise<boolean> => {
+    async (reason: string): Promise<boolean> => {
       if (!dirtyRef.current) return true;
-      const choice = await fileApi.confirmUnsaved(message);
+      const choice = await fileApi.confirmSaveChanges(reason);
       if (choice === 'cancel') return false;
       if (choice === 'save') return doSave();
       return true; // dont-save
@@ -136,37 +137,29 @@ export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileAc
   const openDocument = useCallback(async () => {
     if (!(await confirmProceed('Save changes before opening another document?'))) return;
     try {
-      const doc = await fileApi.open();
-      if (doc) loadInto(textToBlocks(doc.content), doc.path);
-    } catch {
+      const res = await fileApi.open();
+      if (res.canceled) return;
+      if (!res.ok) {
+        setStatus('error');
+        return;
+      }
+      loadInto(textToBlocks(res.content ?? ''), res.filePath ?? null);
+    } catch (err) {
+      console.error('[files] open failed:', err);
       setStatus('error');
     }
   }, [confirmProceed, loadInto]);
 
-  const openPathDocument = useCallback(
-    async (p: string) => {
-      if (!(await confirmProceed('Save changes before opening another document?'))) return;
-      const doc = await fileApi.openPath(p);
-      if (doc) loadInto(textToBlocks(doc.content), doc.path);
-      else setStatus('error');
-    },
-    [confirmProceed, loadInto],
-  );
-
   // Native File-menu actions (mouse + accelerators).
   useEffect(() => {
-    const offFile = onMenuFile((action) => {
+    return onMenuFile((action) => {
+      console.log('[files] menu action:', action);
       if (action === 'new') void newDocument();
       else if (action === 'open') void openDocument();
       else if (action === 'save') void doSave();
-      else if (action === 'saveAs') void doSaveAs();
+      else if (action === 'save-as') void doSaveAs();
     });
-    const offRecent = onMenuOpenRecent((p) => void openPathDocument(p));
-    return () => {
-      offFile();
-      offRecent();
-    };
-  }, [newDocument, openDocument, doSave, doSaveAs, openPathDocument]);
+  }, [newDocument, openDocument, doSave, doSaveAs]);
 
   // Main asks us to save during a window close / quit; reply with the result.
   useEffect(
