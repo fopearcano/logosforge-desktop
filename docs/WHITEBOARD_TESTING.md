@@ -93,6 +93,17 @@ development the app **auto-starts the backend** from `backend/.venv` (set it up
 once via Backend setup above) — or it connects to a backend you started
 yourself.
 
+> **Renderer hot-reloads; the Electron main process does NOT (by default).**
+> Vite hot-reloads the React renderer, but changes to `electron/*` (preload,
+> main, menu, file IPC) only take effect when the **Electron process restarts**.
+> The dev script now uses **nodemon** to rebuild + relaunch Electron automatically
+> on `electron/*` changes — but you must `npm install` once to get nodemon, and
+> after pulling main-process changes you may need to fully restart `npm run dev`.
+> Symptom of a stale main process: in DevTools, `window.logosforge` shows only
+> `getBackendStatus`/`onBackendStatus` (no `fileOpen`), and File → Open/Save do
+> nothing. Fix: quit the app, stop `npm run dev`, run `npm install`, then
+> `npm run dev` again.
+
 For a production-style preview (loads the built renderer, still unpackaged):
 
 ```bash
@@ -625,6 +636,14 @@ syntax-theme switching.
 ## Troubleshooting
 
 **Open / Save dialogs do not appear (no Finder window)**
+
+**First, rule out a stale Electron main process** (the #1 cause). In DevTools run
+`window.logosforge` — if it shows only `getBackendStatus` / `onBackendStatus`
+(no `fileOpen`), you are running the old main/preload: Vite hot-reloaded the
+renderer but Electron never relaunched with the new `electron/*`. **Fix:** quit
+the app, stop `npm run dev`, run `npm install` (for nodemon), then `npm run dev`.
+A healthy bridge logs `[preload] logosforge exposed (flat) keys: [ … fileOpen … ]`
+and `window.logosforge.fileOpen` is a `function`.
 
 The chain is: native/in-app **File action** → `window.logosforge.files.*` (preload)
 → `ipcRenderer.invoke` → `ipcMain.handle` (main) → `dialog.showOpenDialog /

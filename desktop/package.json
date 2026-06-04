@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "concurrently -k -n vite,electron -c blue,green \"npm:dev:renderer\" \"npm:dev:electron\"",
     "dev:renderer": "vite renderer",
-    "dev:electron": "npm run build:electron && wait-on tcp:127.0.0.1:5173 && electron .",
+    "dev:electron": "wait-on tcp:127.0.0.1:5173 && nodemon --watch electron --ext ts --exec \"npm run build:electron && electron .\"",
     "build": "npm run build:renderer && npm run build:electron",
     "build:renderer": "vite build renderer",
     "build:electron": "tsc -p tsconfig.electron.json",
@@ -37,6 +37,7 @@
     "concurrently": "^9.0.1",
     "electron": "^31.3.1",
     "electron-builder": "^24.13.3",
+    "nodemon": "^3.1.7",
     "typescript": "^5.5.4",
     "vite": "^5.4.2",
     "wait-on": "^8.0.1"
