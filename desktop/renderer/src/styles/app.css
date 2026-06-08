@@ -1372,6 +1372,135 @@ body {
   color: var(--muted);
 }
 
+.psyke-detail-text {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* --- PSYKE Small: element creation --- */
+.psyke-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.psyke-add {
+  padding: 2px 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.psyke-add:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.psyke-added {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--ok);
+}
+
+.psyke-empty {
+  padding: 4px 0;
+}
+.psyke-add-inline {
+  margin: 4px 12px;
+  padding: 5px 10px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.psyke-add-inline:hover {
+  background: var(--hover);
+}
+
+.psyke-create {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow-y: auto;
+}
+.psyke-create-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.psyke-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text);
+}
+.psyke-field-col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.psyke-field > span {
+  flex: none;
+}
+.psyke-field select,
+.psyke-field input,
+.psyke-field textarea {
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+.psyke-field > select {
+  width: auto;
+  min-width: 120px;
+}
+.psyke-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 2px;
+}
+.psyke-btn {
+  padding: 5px 12px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.psyke-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+.psyke-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.psyke-btn-primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ============================ Logos (floating box) ============================ */
 .logos-box {
   position: fixed;

@@ -14,6 +14,7 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
+from app.services.psyke_service import psyke_service  # noqa: E402
 from app.services.whiteboard_service import whiteboard_service  # noqa: E402
 
 
@@ -24,7 +25,9 @@ def client() -> TestClient:
 
 @pytest.fixture(autouse=True)
 def _reset_state():
-    """Reset the document (and remove the persisted file) between tests."""
+    """Reset persisted state (document + PSYKE elements) between tests."""
     whiteboard_service.reset()
+    psyke_service.reset()
     yield
     whiteboard_service.reset()
+    psyke_service.reset()

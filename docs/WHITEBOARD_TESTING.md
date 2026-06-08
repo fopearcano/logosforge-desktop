@@ -4,9 +4,11 @@ How to run and test the current **LogosForge Whiteboard Free** phase locally —
 the FastAPI backend, the backend test suite, and the Electron desktop app — plus
 a manual checklist and troubleshooting.
 
-> This phase is a working foundation. AI (Logos) and PSYKE are **offline
-> placeholders**, and backend persistence is **in-memory** (resets on restart).
-> See [Known limitations](#known-limitations) and [`PRO_TODO.md`](PRO_TODO.md).
+> This phase is a working foundation. AI (Logos) is still an **offline
+> placeholder**. PSYKE Small now supports search + creating/persisting elements
+> (story-bible entries) locally; it is intentionally lightweight (no graph, no
+> Pro workspace). See [Known limitations](#known-limitations) and
+> [`PRO_TODO.md`](PRO_TODO.md).
 
 ---
 
@@ -530,6 +532,33 @@ the **Editor** button (right of the status line) or the shortcuts above.
 4. ✅ The UI updates immediately as you pick colours.
 5. Restart the app → ✅ the custom colours (and that Custom is selected) persist.
 
+### PSYKE Small test
+1. Launch the Whiteboard.
+2. Click the **PSYKE** button (top-right) — or **Ctrl/Cmd+Shift+P**.
+3. ✅ The right-side PSYKE panel opens (compact, hideable, theme-aware).
+4. Search for random text → ✅ a clear empty state ("No entries match…") or
+   results appear; the built-in samples (e.g. "Protagonist", "The City") match.
+5. Click **+ Add**.
+6. Select **Character** in the Type dropdown.
+7. Enter — Name: `Zampanò`, Description: `Maltese dog protagonist`,
+   Notes: `Test character`.
+8. Click **Save** → ✅ an "Added 'Zampanò'." confirmation appears and the panel
+   returns to search.
+9. Search `Zampanò` → ✅ it appears (also try `maltese` or `test character` —
+   search matches name, type, description, notes, aliases).
+10. **+ Add** a **Place** named `Constantinople` → search `Constantinople` →
+    ✅ the Place appears. Repeat for Object / Lore / Theme / Other.
+11. Hide the PSYKE panel (× or Esc), reopen it → ✅ created elements are still
+    searchable.
+12. Restart the app / backend → search again → ✅ created elements **persisted**
+    (saved to `~/.logosforge/psyke.json`).
+13. Click a result → ✅ a simple detail view shows name, type, description, notes.
+14. Optional — select text in the editor, open PSYKE, click **+ Add** →
+    ✅ the form is prefilled from the selection (short → name, long → description).
+
+> PSYKE Small stays compact and right-side; no graph, no Pro workspace. Backend:
+> `GET /api/psyke/search`, `POST /api/psyke/elements`, `GET /api/psyke/elements/{id}`.
+
 > **Two clearly-separated states.** The subtle **Draft saved / Draft saving /
 > Draft error** label on the right is the *backend autosave/session* — it is NOT
 > a file save. The **file-state** label next to it is the truth about disk:
@@ -634,8 +663,11 @@ syntax-theme switching.
 - **AI is a placeholder.** `POST /api/logos/inline` returns offline, deterministic
   per-action text (`provider: "stub"`); the `connect` action does perform a real
   PSYKE search. No model is called yet.
-- **PSYKE is sample data.** Search runs over a few placeholder entries; there is
-  no entry creation or persistence yet.
+- **PSYKE Small is lightweight.** Search runs over a few built-in sample entries
+  **plus** any elements you create (Character / Place / Object / Lore / Theme /
+  Other), which persist to `~/.logosforge/psyke.json` and are searchable by name,
+  type, description, notes and aliases. No graph, relationships, or Pro workspace
+  yet — editing/deleting elements is a follow-up.
 - **Persistence is a single JSON file** at `~/.logosforge/whiteboard.json`
   (override the dir with `LOGOSFORGE_DATA_DIR`); it survives backend/Electron
   restarts. Multi-document / per-project storage is a follow-up.
