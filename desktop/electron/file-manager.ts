@@ -96,6 +96,66 @@ export async function saveFileDialog(
   }
 }
 
+// --- Import / Export (extends the file system; Open/Save are untouched) -----
+
+export interface DialogFilter {
+  name: string;
+  extensions: string[];
+}
+
+export type ImportMode = 'replace' | 'append' | 'cancel';
+
+/** Native Open dialog for Import → read the chosen file (caller-supplied filters). */
+export async function openImportDialog(
+  win: BrowserWindow | null,
+  filters: DialogFilter[],
+): Promise<OpenResult> {
+  console.log('[import] open dialog requested');
+  try {
+    const options = { properties: ['openFile' as const], filters };
+    const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
+    if (res.canceled || res.filePaths.length === 0) return { ok: true, canceled: true };
+    return readFileFromPath(res.filePaths[0]);
+  } catch (err) {
+    console.error('[import] open dialog error:', err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+/** Native Save dialog for Export → write content to the chosen path. */
+export async function saveExportDialog(
+  win: BrowserWindow | null,
+  content: string,
+  suggestedName: string,
+  filters: DialogFilter[],
+): Promise<SaveResult> {
+  console.log('[export] save dialog requested:', suggestedName);
+  try {
+    const options = { defaultPath: suggestedName, filters };
+    const res = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
+    if (res.canceled || !res.filePath) return { ok: true, canceled: true };
+    return saveFileToPath(res.filePath, content);
+  } catch (err) {
+    console.error('[export] save dialog error:', err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+/** Native "How should this import be applied?" 3-button prompt. */
+export async function confirmImportMode(win: BrowserWindow | null): Promise<ImportMode> {
+  const options = {
+    type: 'question' as const,
+    buttons: ['Replace current document', 'Append to current document', 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+    message: 'How should this import be applied?',
+    detail: 'Replace swaps the whole document; Append adds the imported content to the end.',
+  };
+  const res = win ? await dialog.showMessageBox(win, options) : await dialog.showMessageBox(options);
+  return res.response === 0 ? 'replace' : res.response === 1 ? 'append' : 'cancel';
+}
+
 /** Native "Save changes?" 3-button prompt. */
 export async function confirmSaveChanges(
   win: BrowserWindow | null,

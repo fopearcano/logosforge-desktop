@@ -40,6 +40,31 @@ export function setAppMenu({ getWindow }: MenuDeps): void {
     ],
   };
 
+  const importSubmenu: MenuItemConstructorOptions = {
+    label: 'Import',
+    submenu: [
+      { label: 'Import Text…', click: () => fileAction('import:txt') },
+      { label: 'Import Markdown…', click: () => fileAction('import:md') },
+      { label: 'Import Fountain…', click: () => fileAction('import:fountain') },
+      { label: 'Import LogosForge…', click: () => fileAction('import:logosforge') },
+      { label: 'Import Final Draft…', click: () => fileAction('import:fdx') },
+    ],
+  };
+
+  const exportSubmenu: MenuItemConstructorOptions = {
+    label: 'Export',
+    submenu: [
+      { label: 'Export as Text…', click: () => fileAction('export:txt') },
+      { label: 'Export as Markdown…', click: () => fileAction('export:md') },
+      { label: 'Export as Fountain…', click: () => fileAction('export:fountain') },
+      { label: 'Export as LogosForge…', click: () => fileAction('export:logosforge') },
+      { label: 'Export as JSON…', click: () => fileAction('export:json') },
+      { label: 'Export as HTML…', click: () => fileAction('export:html') },
+      { type: 'separator' },
+      { label: 'Export as PDF… (planned)', enabled: false },
+    ],
+  };
+
   const fileMenu: MenuItemConstructorOptions = {
     label: 'File',
     submenu: [
@@ -48,6 +73,9 @@ export function setAppMenu({ getWindow }: MenuDeps): void {
       { type: 'separator' },
       { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => fileAction('save') },
       { label: 'Save As…', accelerator: 'CmdOrCtrl+Shift+S', click: () => fileAction('save-as') },
+      { type: 'separator' },
+      importSubmenu,
+      exportSubmenu,
       { type: 'separator' },
       { role: 'close', label: 'Close Window' }, // Cmd/Ctrl+W → window close guard
       ...((isMac ? [] : [{ type: 'separator' }, { role: 'quit' }]) as MenuItemConstructorOptions[]),

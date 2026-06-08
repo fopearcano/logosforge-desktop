@@ -8,8 +8,10 @@ a manual checklist and troubleshooting.
 > placeholder**. PSYKE Small now supports search + creating/persisting elements
 > (story-bible entries) locally. The left **Outline** panel now has a manual,
 > editable, persisted **story outliner** (Dynalist-style) alongside the existing
-> read-only **From Document** navigator. Everything stays intentionally
-> lightweight (no graph, no dockable Pro workspace). See
+> read-only **From Document** navigator. File management now includes an
+> **Import / Export** system (Text / Markdown / Fountain / Final Draft import;
+> Text / Markdown / Fountain / LogosForge / JSON / HTML export). Everything stays
+> intentionally lightweight (no graph, no dockable Pro workspace). See
 > [Known limitations](#known-limitations) and [`PRO_TODO.md`](PRO_TODO.md).
 
 ---
@@ -159,12 +161,13 @@ engine and the Nerd Mode editor tools are pure and unit-tested:
 
 ```bash
 cd desktop
-npm test                 # typecheck + screenplay + editor-tools + files + themes + outline
+npm test                 # typecheck + screenplay + editor-tools + files + themes + outline + import-export
 npm run test:screenplay  # just the Fountain parser/classifier tests
 npm run test:editor-tools # line numbers, folding, syntax classify
 npm run test:files       # file <-> text serialization round-trips
 npm run test:themes      # theme palettes + readability invariant + custom derive
 npm run test:outline     # manual story-outliner model (tree ops, mode defaults)
+npm run test:import-export # import parsers + export builders + LogosForge round-trip
 npm run build            # verify the renderer bundles and electron compiles
 ```
 
@@ -226,6 +229,9 @@ backend isn't running it tells you how to start it.
 - [ ] **Logos** opens with **Ctrl/Cmd+K** as a floating box at the cursor; with
       text selected, **Connect** lists related PSYKE entries; **Replace/Insert**
       applies into the document; **Esc** closes
+- [ ] **File → Import** loads Text/Markdown/Fountain (Replace or Append) and
+      marks the document Modified; **File → Export** writes Text/Markdown/
+      Fountain/LogosForge/JSON/HTML without clearing dirty state
 - [ ] No Pro surfaces appear (no dashboard/timeline/graph/analytics)
 
 ---
@@ -663,14 +669,18 @@ the **Editor** button (right of the status line) or the shortcuts above.
 1. Launch Electron (`npm run dev`).
 2. Look at the macOS menu bar (top of the screen).
 3. Open **File**.
-4. ✅ File contains **New**, **Open…**, **Save**, **Save As…**, **Close Window**
-   (plus **Open Recent**).
+4. ✅ File contains **New**, **Open…**, **Save**, **Save As…**, an **Import**
+   submenu, an **Export** submenu, and **Close Window**.
 5. ✅ Shortcuts are visible: ⌘N / ⌘O / ⌘S / ⇧⌘S / ⌘W.
-6. ✅ The app menu (bold app name) has About / Services / Hide / Quit; **⌘Q** quits.
+6. ✅ **Import** lists Text / Markdown / Fountain / LogosForge / Final Draft.
+   **Export** lists Text / Markdown / Fountain / LogosForge / JSON / HTML, and a
+   disabled **Export as PDF… (planned)**.
+7. ✅ The app menu (bold app name) has About / Services / Hide / Quit; **⌘Q** quits.
 
 ### In-app File control test
 1. Click the top-left **File** button in the writing area.
-2. ✅ It lists New, Open…, Save, Save As….
+2. ✅ It lists New, Open…, Save, Save As…, then an **Import** group and an
+   **Export** group with the same format items as the native File menu.
 3. ✅ Each action works and does exactly the same thing as the native menu (one
    shared file-action pathway — no duplicated logic).
 
@@ -695,6 +705,109 @@ the **Editor** button (right of the status line) or the shortcuts above.
 1. Press **Cmd/Ctrl+O**, choose `test.fountain`
    (`.fountain` / `.txt` / `.md` / `.logosforge` / `.logforge` are supported).
 2. ✅ The content loads; state is clean (no `*`).
+
+### Import / Export overview
+
+Import/Export **extends** the file system — it never changes New/Open/Save/Save
+As. Conceptually:
+
+- **Open / Save / Save As** own the *active document* (set the file path, clear
+  the dirty flag). Unchanged.
+- **Import** loads external content *into* the current document (Replace or
+  Append). It marks the document **Modified** and does **not** set the active
+  file path.
+- **Export** writes the current document to another format. It is a *copy*: it
+  never clears the dirty flag and never changes the active file path.
+
+Where work happens (no backend changes were needed): native dialogs +
+filesystem IO live in the **Electron main process** (secure IPC — the renderer
+never touches `fs`); format conversions are pure renderer utilities
+(`features/files/importExportFormats.ts`, unit-tested via
+`npm run test:import-export`).
+
+**Formats.** Import: `.txt`, `.md`, `.fountain`, `.logosforge`/`.logforge`/`.json`,
+and `.fdx` (a regex-based Final Draft foundation: scene heading / action /
+character / parenthetical / dialogue / transition → Fountain). Export: `.txt`,
+`.md`, `.fountain`, `.logosforge`, `.json`, `.html`. PDF is a declared,
+**disabled** “planned” item (no low-quality fake PDF).
+
+**LogosForge internal format (`.logosforge`, JSON).** A self-contained envelope
+— it deliberately contains **no machine paths**:
+
+```json
+{
+  "format": "logosforge-whiteboard",
+  "version": "1.0",
+  "document": { "title": "…", "mode": "screenplay|novel|…",
+                "content": "…", "settings": { … } },
+  "outline": [ … ],
+  "psyke": { "elements": [] },
+  "metadata": { "createdAt": "…", "updatedAt": "…", "exportedAt": "…" }
+}
+```
+
+`document.content` is the same text serialization Save uses (so it round-trips
+with `.fountain`/`.md`/`.txt`); `outline` is the persisted manual outliner;
+`psyke.elements` is reserved (the story bible is its own persisted store and is
+not bulk-embedded in a document export — importing elements, if present, is
+best-effort).
+
+### Import test
+1. Start Whiteboard (`npm run dev`).
+2. Create a sample text file, e.g.
+   `printf 'Hello from a text file.\nSecond line.\n' > /tmp/sample.txt`.
+3. **File → Import → Import Text…** (native File menu or the in-app **File**
+   dropdown — both work).
+4. Pick the file → the prompt **“How should this import be applied?”** appears →
+   choose **Replace current document**.
+5. ✅ The text appears in the editor and a toast says *Imported sample.txt
+   (replaced).*
+6. ✅ The document becomes **Modified** (`Untitled — Modified`, title shows `*`).
+   Import does **not** set an active file path — it’s still `Untitled`.
+7. Import another `.txt` and choose **Append** → ✅ its content is added to the
+   end (a blank line separates it from the existing text).
+8. Create a Fountain file:
+   `printf 'INT. HOUSE - DAY\n\nShe opens the door.\n\nJANE\nHello.\n' > /tmp/s.fountain`.
+9. **File → Import → Import Fountain…** → Replace.
+10. ✅ Writing Mode switches to **Screenplay** and screenplay formatting/parsing
+    activates (scene heading, character/dialogue).
+11. With unsaved changes, importing with **Replace** first asks *“Importing will
+    replace the current document. Save changes first?”* (Save / Don’t Save /
+    Cancel) — **Cancel** aborts the import and leaves the document untouched.
+
+### File Export test
+1. Type some text.
+2. **File → Export → Export as Text…** → save `export-test.txt`.
+3. ✅ A toast says *Exported export-test.txt.*; open the file externally →
+   content matches.
+4. **Export as Fountain…** → save `export-test.fountain` → ✅ it contains the
+   screenplay / plain-text content.
+5. **Export as LogosForge…** → save `export-test.logosforge` → ✅ a JSON file is
+   written with `"format": "logosforge-whiteboard"`, `document.content`,
+   `outline`, `metadata`, and **no machine file paths** inside it.
+6. **File → Import → Import LogosForge…** → pick `export-test.logosforge` →
+   **Replace** → ✅ the content restores (and the manual **Outline** restores if
+   you had outline items — the panel refreshes automatically).
+7. ✅ **Export as JSON…** and **Export as HTML…** also write the respective files
+   (`.json` = `{title, mode, blocks}`; `.html` = a readable standalone page).
+
+### Export dirty-state test
+1. Type text → the document is **Modified**.
+2. **Export as Text…** (or any Export).
+3. ✅ The document **remains Modified** after exporting — an export is a *copy*;
+   it never clears dirty state and never changes the active file path.
+4. Now **Save** (Cmd/Ctrl+S) normally.
+5. ✅ The dirty `*` clears **only** after Save / Save As — never after Export.
+
+### Unsupported / failed import test
+1. **File → Import → Import Text…**, switch the picker to **All Files**, and
+   choose a binary file (e.g. a `.png`).
+2. ✅ A friendly error toast appears (*“This file does not look like a readable
+   text document.”*) and the app does **not** crash.
+3. **Import LogosForge…** on a non-JSON or wrong-`format` file → ✅ a clear error
+   toast (*“This file is not valid JSON.”* / *“Unrecognized format …”*).
+4. **Import Final Draft…** on a non-FDX file → ✅ *“This does not look like a
+   Final Draft (.fdx) file.”* Cancelling any picker is a silent no-op.
 
 ### Close protection test
 1. Start blank; type text.

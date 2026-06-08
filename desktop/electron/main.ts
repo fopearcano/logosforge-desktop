@@ -3,8 +3,12 @@ import * as path from 'node:path';
 
 import { BackendManager, type BackendStatus } from './backend-manager';
 import {
+  confirmImportMode,
   confirmSaveChanges,
+  type DialogFilter,
   openFileDialog,
+  openImportDialog,
+  saveExportDialog,
   saveFileDialog,
   saveFileToPath,
 } from './file-manager';
@@ -108,6 +112,23 @@ function registerFileIpc(): void {
   ipcMain.handle('file:confirm-save-changes', (_e, payload: { reason?: string }) => {
     console.log('[ipc] file:confirm-save-changes');
     return confirmSaveChanges(mainWindow, payload?.reason);
+  });
+
+  // Import / Export (extends the file system; reuses the same window guard).
+  ipcMain.handle('import:open-dialog', (_e, payload: { filters: DialogFilter[] }) => {
+    console.log('[ipc] import:open-dialog');
+    return openImportDialog(mainWindow, payload.filters);
+  });
+  ipcMain.handle(
+    'export:save-dialog',
+    (_e, payload: { content: string; suggestedName: string; filters: DialogFilter[] }) => {
+      console.log('[ipc] export:save-dialog');
+      return saveExportDialog(mainWindow, payload.content, payload.suggestedName, payload.filters);
+    },
+  );
+  ipcMain.handle('import:confirm-mode', () => {
+    console.log('[ipc] import:confirm-mode');
+    return confirmImportMode(mainWindow);
   });
 
   ipcMain.on('file:set-dirty', (_e, dirty: boolean) => {

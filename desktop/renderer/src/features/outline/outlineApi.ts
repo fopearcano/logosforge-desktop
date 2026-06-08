@@ -68,3 +68,20 @@ export async function saveOutlineItems(
   if (!res.ok) throw new Error(`Save failed (HTTP ${res.status})`);
   return toNodes((await res.json()) as OutlineItemsResponse);
 }
+
+// --- external-change signal -------------------------------------------------
+// The manual outline lives in its own store (OutlinePanel). When something else
+// rewrites the persisted list out-of-band (e.g. a LogosForge import), it emits
+// this so the store reloads from the backend instead of showing stale data.
+
+const OUTLINE_REFRESH_EVENT = 'lf:outline-refresh';
+
+export function emitOutlineRefresh(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(OUTLINE_REFRESH_EVENT));
+}
+
+export function onOutlineRefresh(cb: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(OUTLINE_REFRESH_EVENT, cb);
+  return () => window.removeEventListener(OUTLINE_REFRESH_EVENT, cb);
+}

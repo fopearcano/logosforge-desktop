@@ -1,7 +1,13 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 import type { BackendStatus } from './backend-manager';
-import type { OpenResult, SaveChoice, SaveResult } from './file-manager';
+import type {
+  DialogFilter,
+  ImportMode,
+  OpenResult,
+  SaveChoice,
+  SaveResult,
+} from './file-manager';
 
 /**
  * IMPORTANT: every method is exposed at the TOP LEVEL (flat), not nested under a
@@ -21,6 +27,10 @@ export interface LogosForgeApi {
   fileSetDirty(dirty: boolean): void;
   fileOnSaveBeforeClose(cb: () => void): () => void;
   fileSendCloseResult(ok: boolean): void;
+
+  importOpen(filters: DialogFilter[]): Promise<OpenResult>;
+  importConfirmMode(): Promise<ImportMode>;
+  exportSave(content: string, suggestedName: string, filters: DialogFilter[]): Promise<SaveResult>;
 
   onMenuFile(cb: (action: string) => void): () => void;
   onMenuView(cb: (action: string) => void): () => void;
@@ -44,6 +54,11 @@ const api: LogosForgeApi = {
   fileSetDirty: (dirty) => ipcRenderer.send('file:set-dirty', dirty),
   fileOnSaveBeforeClose: (cb) => subscribe<void>('app:save-before-close', () => cb()),
   fileSendCloseResult: (ok) => ipcRenderer.send('app:close-result', ok),
+
+  importOpen: (filters) => ipcRenderer.invoke('import:open-dialog', { filters }),
+  importConfirmMode: () => ipcRenderer.invoke('import:confirm-mode'),
+  exportSave: (content, suggestedName, filters) =>
+    ipcRenderer.invoke('export:save-dialog', { content, suggestedName, filters }),
 
   onMenuFile: (cb) => subscribe<string>('menu:file', cb),
   onMenuView: (cb) => subscribe<string>('menu:view', cb),

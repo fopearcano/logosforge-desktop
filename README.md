@@ -16,8 +16,12 @@ inline Logos assistant — built as a local **FastAPI** backend behind an
 - **Writing Modes** — the five StoryPlanner modes (Novel, Screenplay, Graphic
   Novel, Stage Script, Series), selectable; the editor reacts (e.g. Screenplay/
   Stage use a monospaced surface).
-- **Outline** — a hideable left panel derived from document headings, with
-  click-to-scroll.
+- **Outline** — a hideable left panel: a manual, persisted story outliner plus a
+  read-only navigator derived from document headings (click-to-scroll).
+- **Import / Export** — File → Import (Text, Markdown, Fountain, Final Draft) and
+  File → Export (Text, Markdown, Fountain, LogosForge, JSON, HTML). Import is
+  Replace/Append and marks the doc modified; Export is a copy (never clears the
+  dirty flag). `.logosforge` is the self-contained JSON document format.
 - **PSYKE** — a simple floating story-bible search panel (search → list →
   detail), pre-filled from the editor selection.
 - **Logos** — an inline, Codex-style assistant in a floating box at the cursor

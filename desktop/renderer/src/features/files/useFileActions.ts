@@ -31,6 +31,12 @@ export interface FileActionsApi {
   openDocument: () => void;
   saveDocument: () => void;
   saveDocumentAs: () => void;
+  /**
+   * Run the unsaved-changes guard (Save / Don't Save / Cancel) before a
+   * destructive action like an import-replace. Resolves true to proceed, false
+   * to abort. No-op (returns true) when the document is clean.
+   */
+  confirmProceedPastUnsavedChanges: (reason: string) => Promise<boolean>;
 }
 
 export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileActionsApi {
@@ -180,5 +186,6 @@ export function useFileActions({ getBlocks, loadBlocks, mode }: Options): FileAc
     openDocument: () => void openDocument(),
     saveDocument: () => void doSave(),
     saveDocumentAs: () => void doSaveAs(),
+    confirmProceedPastUnsavedChanges: confirmProceed,
   };
 }

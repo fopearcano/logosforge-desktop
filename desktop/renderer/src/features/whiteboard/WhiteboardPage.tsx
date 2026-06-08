@@ -12,7 +12,9 @@ import { editorToolsAttrs, editorToolsVars } from '../editorTools/editorToolsSur
 import { useFolding } from '../editorTools/folding/useFolding';
 import { useEditorTools } from '../editorTools/useEditorTools';
 import { fileStateLabel, windowTitle } from '../files/fileState';
+import { EXPORT_FORMATS, IMPORT_FORMATS } from '../files/importExportFormats';
 import { useFileActions } from '../files/useFileActions';
+import { useImportExport } from '../files/useImportExport';
 import { LogosFloatingBox } from '../logos/LogosFloatingBox';
 import { PreviewView } from '../screenplay/PreviewView';
 import { toFountainBlocks } from '../screenplay/screenplayExport';
@@ -96,6 +98,21 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange, onModeChange }
   }, []);
   const fileDoc = useFileActions({ getBlocks: () => liveBlocksRef.current, loadBlocks, mode });
   const markFileDirty = fileDoc.markDirty;
+
+  // Import / Export (extends file management; never alters Open/Save semantics).
+  const importExport = useImportExport({
+    baseUrl,
+    getBlocks: () => liveBlocksRef.current,
+    getMode: () => doc?.mode ?? defaultMode,
+    getTitle: () => doc?.title ?? 'Untitled',
+    getFileLabel: () => fileDoc.fileName,
+    getSettings: () => settingsApi.settings,
+    applySettings: settingsApi.replace,
+    loadBlocks,
+    setMode,
+    markDirty: markFileDirty,
+    confirmProceedPastUnsavedChanges: fileDoc.confirmProceedPastUnsavedChanges,
+  });
 
   // Autosave + recompute the (client-derived) outline + live snapshot on edit.
   const handleBlocks = useCallback(
@@ -210,7 +227,7 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange, onModeChange }
         <div className="wb-statusline-left">
           <Popover label="File" title="File menu">
             {(close) => (
-              <div className="wb-menu">
+              <div className="wb-menu wb-menu-scroll">
                 <button
                   type="button"
                   className="wb-menu-item"
@@ -250,6 +267,41 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange, onModeChange }
                   }}
                 >
                   Save As…
+                </button>
+
+                <div className="wb-menu-sep" role="separator" />
+                <div className="wb-menu-label">Import</div>
+                {IMPORT_FORMATS.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className="wb-menu-item"
+                    onClick={() => {
+                      importExport.runImport(f.id);
+                      close();
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+
+                <div className="wb-menu-sep" role="separator" />
+                <div className="wb-menu-label">Export</div>
+                {EXPORT_FORMATS.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className="wb-menu-item"
+                    onClick={() => {
+                      importExport.runExport(f.id);
+                      close();
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+                <button type="button" className="wb-menu-item" disabled title="Planned">
+                  Export as PDF… (planned)
                 </button>
               </div>
             )}
@@ -328,6 +380,17 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange, onModeChange }
         ) : null}
       </div>
       {editor && doc && <LogosFloatingBox editor={editor} mode={doc.mode} baseUrl={baseUrl} />}
+
+      {importExport.feedback && (
+        <div
+          className={`wb-toast wb-toast-${importExport.feedback.kind}`}
+          role="status"
+          onClick={importExport.clearFeedback}
+          title="Dismiss"
+        >
+          {importExport.feedback.message}
+        </div>
+      )}
     </main>
   );
 }

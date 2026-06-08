@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { getOutlineItems, saveOutlineItems } from './outlineApi';
+import { getOutlineItems, onOutlineRefresh, saveOutlineItems } from './outlineApi';
 import * as M from './outlineModel';
 import type { OutlineItemType, OutlineNode } from './outlineModel';
 
@@ -133,6 +133,22 @@ export function useOutline({ baseUrl, ready, mode }: Options): OutlineStore {
         setLoading(false);
       });
     return () => controller.abort();
+  }, [ready, baseUrl]);
+
+  // Reload when the persisted list is rewritten out-of-band (e.g. a LogosForge
+  // import). Keeps the panel in sync without a manual refresh.
+  useEffect(() => {
+    if (!ready) return undefined;
+    return onOutlineRefresh(() => {
+      getOutlineItems(baseUrl)
+        .then((loaded) => {
+          itemsRef.current = loaded;
+          setItems(loaded);
+        })
+        .catch(() => {
+          /* best-effort; the next mount reload will recover */
+        });
+    });
   }, [ready, baseUrl]);
 
   // Flush a pending save on unmount (e.g. when the Outline panel is hidden).
