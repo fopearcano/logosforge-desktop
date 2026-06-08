@@ -40,8 +40,10 @@ async function main() {
   }
 
   try {
-    record('GET  /health', (await json('GET', '/health')).status === 'ok');
-    record('GET  /api/version', !!(await json('GET', '/api/version')).api_version);
+    const health = await json('GET', '/health');
+    record('GET  /health', health.status === 'ok' && !!health.api_version && !!health.core_version);
+    const ver = await json('GET', '/api/version');
+    record('GET  /api/version', !!ver.api_version && !!ver.core_version);
     record('GET  /api/whiteboard', Array.isArray((await json('GET', '/api/whiteboard')).blocks));
 
     const put = await json('PUT', '/api/whiteboard', {
@@ -54,8 +56,17 @@ async function main() {
 
     record('GET  /api/outline', Array.isArray((await json('GET', '/api/outline')).items));
 
+    record('GET  /api/outline/items', Array.isArray((await json('GET', '/api/outline/items')).items));
+    const outlinePut = await json('PUT', '/api/outline/items', {
+      items: [{ id: 'n0', parentId: null, type: 'act', title: 'Smoke', order: 0 }],
+    });
+    record('PUT  /api/outline/items', outlinePut.items.length === 1);
+
     const psyke = await json('GET', '/api/psyke/search?q=test');
     record('GET  /api/psyke/search', Array.isArray(psyke.results));
+
+    const created = await json('POST', '/api/psyke/elements', { type: 'character', name: 'SmokeHero' });
+    record('POST /api/psyke/elements', created.ok === true && !!created.element?.id);
 
     const logos = await json('POST', '/api/logos/inline', { action: 'suggest', selection: 'test' });
     record('POST /api/logos/inline', logos.ok === true && !!logos.output);

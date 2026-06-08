@@ -16,7 +16,19 @@ from app.websocket.events import router as ws_router
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.app_name, version=settings.version)
+    # OpenAPI ``info.version`` is the stable API *contract* version (kept aligned
+    # with StoryPlanner's API_CONTRACT_VERSION) — this is what a generated shared
+    # client targets. The backend build is reported separately as ``core_version``
+    # via /health and /api/version.
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.api_version,
+        description=(
+            "Local-first FastAPI backend for the LogosForge Whiteboard "
+            "(Electron desktop). Endpoint contract aligned with the StoryPlanner "
+            "core/API patterns."
+        ),
+    )
 
     # Local-first CORS: only loopback origins (Electron / dev browser).
     app.add_middleware(

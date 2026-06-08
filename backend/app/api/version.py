@@ -16,5 +16,6 @@ def version() -> VersionResponse:
         name=settings.app_name,
         version=settings.version,
         api_version=settings.api_version,
+        core_version=settings.version,
         status=settings.status,
     )

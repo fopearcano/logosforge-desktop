@@ -16,9 +16,21 @@ a manual checklist and troubleshooting.
 
 ## Prerequisites
 
-- **Python 3.10+** (backend)
+- **Python 3.10+** (backend) — developed/tested on **3.13** (pinned in
+  `backend/.python-version`). The backend runs unchanged on 3.10–3.13.
 - **Node.js 18+** and **npm** (desktop app; Node 18+ is required for the smoke script's `fetch`)
 - A desktop environment to display the Electron window (the GUI cannot run headless)
+
+> **StoryPlanner sync / Python migration notes.** StoryPlanner (the read-only
+> reference for the Python core/API patterns) is **Python 3.10+** and exposes a
+> FastAPI DTO layer whose `/api/health` reports `api_version` + `core_version`
+> for desktop/web client compatibility. After the Python update, this backend was
+> verified on **3.13** (full suite green) and synced to the same compatibility
+> shape: `/health` now also returns `version` / `api_version` / `core_version`,
+> and the OpenAPI `info.version` is the API contract version. Dependency floors
+> were nudged where a compiled wheel requires it (`pydantic>=2.9` for 3.13).
+> No endpoints, schemas (beyond additive version fields), writing modes, or app
+> behaviour changed.
 
 ## Repository layout
 
@@ -132,11 +144,13 @@ cd backend && python -m pytest          # all tests
 cd backend && python -m pytest -k smoke # just the API smoke
 ```
 
-The suite covers `/health`, `/api/version`, `/api/whiteboard` (GET + PUT),
+The suite covers `/health` (incl. the `version`/`api_version`/`core_version`
+compat fields), `/api/version`, `/api/whiteboard` (GET + PUT),
 `/api/writing-modes`, `/api/outline` (document-derived), `/api/outline/items`
 (the manual story outliner — GET + PUT, with a persistence-across-restart test),
-`/api/psyke/search`, `/api/logos/inline`, and the `/ws/events` WebSocket.
-`tests/test_smoke.py` is a single end-to-end "is the whole API alive?" check.
+`/api/psyke/search`, `/api/psyke/elements` (create + persistence),
+`/api/logos/inline`, and the `/ws/events` WebSocket. `tests/test_smoke.py` is a
+single end-to-end "is the whole API alive?" check.
 
 ### Frontend (type safety + pure engine tests)
 
@@ -176,8 +190,9 @@ backend isn't running it tells you how to start it.
 
 ### Backend API (backend running)
 
-- [ ] `GET /health` returns `{ "status": "ok", ... }`
-- [ ] `GET /api/version` returns name / version / `api_version`
+- [ ] `GET /health` returns `{ "status": "ok", ... }` including `version`,
+      `api_version` and `core_version` (compat fields synced with StoryPlanner)
+- [ ] `GET /api/version` returns name / version / `api_version` / `core_version`
 - [ ] `GET /api/whiteboard` returns a document (`blocks`, `mode`, …)
 - [ ] `PUT /api/whiteboard` with `{ "blocks": [...] }` saves and returns it
 - [ ] `GET /api/writing-modes` returns 5 modes + `default_mode`

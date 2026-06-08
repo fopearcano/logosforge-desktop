@@ -5,4 +5,5 @@ def test_version(client):
     assert body["name"]
     assert body["version"]
     assert body["api_version"] == "1.0.0"
+    assert body["core_version"] == body["version"]
     assert body["status"]

@@ -12,4 +12,10 @@ router = APIRouter(tags=["meta"])
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", service=settings.app_name)
+    return HealthResponse(
+        status="ok",
+        service=settings.app_name,
+        version=settings.version,          # core build (back-compat field)
+        api_version=settings.api_version,  # stable DTO/action contract
+        core_version=settings.version,     # explicit alias of the core build
+    )

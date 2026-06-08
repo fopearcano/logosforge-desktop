@@ -12,7 +12,9 @@ the (future) Electron/web frontend.
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10+ (developed/tested on **3.13** — pinned in `backend/.python-version`).
+  The dependency floors are chosen so a clean install works on 3.13 (e.g.
+  `pydantic>=2.9`, the first release with 3.13 wheels).
 
 ## Setup
 
@@ -40,16 +42,23 @@ Host/port/version can be overridden via env vars: `LOGOSFORGE_HOST`,
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET  | `/health` | Liveness probe (`{status, service}`) |
-| GET  | `/api/version` | Name / app version / API contract version / status |
+| GET  | `/health` | Liveness + compat (`{status, service, version, api_version, core_version}`) |
+| GET  | `/api/version` | Name / build version / API contract version / `core_version` / status |
 | GET  | `/api/whiteboard` | Get the current whiteboard document |
 | POST | `/api/whiteboard` | Create/replace the document (201) |
 | PUT  | `/api/whiteboard` | Partial update (title / mode / blocks) |
 | GET  | `/api/writing-modes` | The five Writing Modes + default |
 | GET  | `/api/outline` | Outline derived from the document's structural blocks |
-| GET  | `/api/psyke/search?q=` | PSYKE entry search (stub: empty store) |
+| GET/PUT | `/api/outline/items` | The manual story outliner (persisted node list) |
+| GET  | `/api/psyke/search?q=` | PSYKE entry search (sample + user-created entries) |
+| POST | `/api/psyke/elements` | Create a PSYKE element (persisted) |
 | POST | `/api/logos/inline` | Inline assistant (stub: offline, deterministic) |
 | WS   | `/ws/events` | Live-events foundation (greets `connected`, echoes messages) |
+
+`/health` and `/api/version` report both the backend build (`version` /
+`core_version`) and the stable DTO contract (`api_version`, also the OpenAPI
+`info.version`) — mirroring StoryPlanner's `/api/health` so a shared client can
+verify compatibility from one call.
 
 ## Project layout
 

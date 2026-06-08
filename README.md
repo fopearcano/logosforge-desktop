@@ -38,6 +38,9 @@ Pro dockable workspace, advanced HUD visuals.
 
 ## How to run
 
+Backend requires **Python 3.10+** (developed/tested on **3.13**; see
+`backend/.python-version`).
+
 ```bash
 # 1) backend (one-time venv + deps)
 cd backend
