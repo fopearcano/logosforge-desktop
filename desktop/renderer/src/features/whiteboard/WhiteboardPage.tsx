@@ -43,9 +43,11 @@ interface Props {
   baseUrl: string;
   ready: boolean;
   onOutlineChange?: (items: OutlineItem[]) => void;
+  /** Notifies the shell of the current writing mode (for outline defaults). */
+  onModeChange?: (mode: string) => void;
 }
 
-export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
+export function WhiteboardPage({ baseUrl, ready, onOutlineChange, onModeChange }: Props) {
   const { doc, loading, loadError, saveStatus, onChangeBlocks, setMode } = useWhiteboardDocument({
     baseUrl,
     ready,
@@ -72,6 +74,8 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
 
   const onOutlineRef = useRef(onOutlineChange);
   onOutlineRef.current = onOutlineChange;
+  const onModeChangeRef = useRef(onModeChange);
+  onModeChangeRef.current = onModeChange;
   const lastDocIdRef = useRef<string | null>(null);
   const previewRef = useRef(preview);
   previewRef.current = preview;
@@ -122,6 +126,11 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange }: Props) {
       onOutlineRef.current?.(deriveOutline(liveBlocksRef.current, doc.mode));
     }
   }, [doc]);
+
+  // Surface the current writing mode to the shell (Outline mode-aware defaults).
+  useEffect(() => {
+    onModeChangeRef.current?.(mode);
+  }, [mode]);
 
   // Leaving Screenplay mode exits Preview.
   useEffect(() => {

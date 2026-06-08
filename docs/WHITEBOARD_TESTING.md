@@ -6,9 +6,11 @@ a manual checklist and troubleshooting.
 
 > This phase is a working foundation. AI (Logos) is still an **offline
 > placeholder**. PSYKE Small now supports search + creating/persisting elements
-> (story-bible entries) locally; it is intentionally lightweight (no graph, no
-> Pro workspace). See [Known limitations](#known-limitations) and
-> [`PRO_TODO.md`](PRO_TODO.md).
+> (story-bible entries) locally. The left **Outline** panel now has a manual,
+> editable, persisted **story outliner** (Dynalist-style) alongside the existing
+> read-only **From Document** navigator. Everything stays intentionally
+> lightweight (no graph, no dockable Pro workspace). See
+> [Known limitations](#known-limitations) and [`PRO_TODO.md`](PRO_TODO.md).
 
 ---
 
@@ -131,9 +133,10 @@ cd backend && python -m pytest -k smoke # just the API smoke
 ```
 
 The suite covers `/health`, `/api/version`, `/api/whiteboard` (GET + PUT),
-`/api/writing-modes`, `/api/outline`, `/api/psyke/search`, `/api/logos/inline`,
-and the `/ws/events` WebSocket. `tests/test_smoke.py` is a single end-to-end
-"is the whole API alive?" check.
+`/api/writing-modes`, `/api/outline` (document-derived), `/api/outline/items`
+(the manual story outliner — GET + PUT, with a persistence-across-restart test),
+`/api/psyke/search`, `/api/logos/inline`, and the `/ws/events` WebSocket.
+`tests/test_smoke.py` is a single end-to-end "is the whole API alive?" check.
 
 ### Frontend (type safety + pure engine tests)
 
@@ -142,11 +145,12 @@ engine and the Nerd Mode editor tools are pure and unit-tested:
 
 ```bash
 cd desktop
-npm test                 # typecheck + screenplay + editor-tools + files + themes
+npm test                 # typecheck + screenplay + editor-tools + files + themes + outline
 npm run test:screenplay  # just the Fountain parser/classifier tests
 npm run test:editor-tools # line numbers, folding, syntax classify
 npm run test:files       # file <-> text serialization round-trips
 npm run test:themes      # theme palettes + readability invariant + custom derive
+npm run test:outline     # manual story-outliner model (tree ops, mode defaults)
 npm run build            # verify the renderer bundles and electron compiles
 ```
 
@@ -178,6 +182,9 @@ backend isn't running it tells you how to start it.
 - [ ] `PUT /api/whiteboard` with `{ "blocks": [...] }` saves and returns it
 - [ ] `GET /api/writing-modes` returns 5 modes + `default_mode`
 - [ ] `GET /api/outline` returns `items` (derived from headings)
+- [ ] `GET /api/outline/items` returns `{ "items": [] }` initially; `PUT
+      /api/outline/items` with `{ "items": [...] }` saves and returns it (the
+      manual story outliner; persists to `<data_dir>/outline.json`)
 - [ ] `GET /api/psyke/search?q=test` returns a `results` array
 - [ ] `POST /api/logos/inline` returns `{ ok, output, provider, ... }`
 
@@ -192,7 +199,11 @@ backend isn't running it tells you how to start it.
 - [ ] Typing shows **Saving… → Saved** (autosave); reopening keeps the text
 - [ ] **Outline** toggles via the `☰` button or **Ctrl/Cmd+Shift+O**; when hidden
       it fully disappears (no rail) and the editor expands
-- [ ] Typing `# A heading` adds it to the Outline; clicking it scrolls there
+- [ ] The Outline header has an **Outline / From Document** toggle. **Outline**
+      (default) is the manual, editable story outliner; **+ Add** creates a root
+      item you can rename, nest and reorder — it persists across restarts
+- [ ] **From Document** shows the read-only navigator; typing `# A heading` adds
+      it there and clicking it scrolls the editor to that line
 - [ ] **Writing Mode** selector loads the 5 modes; switching to Screenplay makes
       the surface monospaced
 - [ ] **PSYKE** opens via the `PSYKE` button or **Ctrl/Cmd+Shift+P**; searching
@@ -257,8 +268,8 @@ Expected (classification is automatic — no manual block cycling):
 * `CUT TO:` → **Transition** (right-aligned).
 * The status line shows the inferred element at the cursor.
 
-### Outline test
-Still in Screenplay mode, type:
+### Outline — From Document (derived navigator) test
+In the Outline header, click **From Document**. Still in Screenplay mode, type:
 
 ```
 # Act One
@@ -274,14 +285,76 @@ She opens the door.
 ```
 
 Expected:
-* The **Outline** shows **Act One** (section, level 1), **Sequence One**
-  (section, level 2, indented further), **Opening image** (synopsis),
+* The **From Document** view shows **Act One** (section, level 1), **Sequence
+  One** (section, level 2, indented further), **Opening image** (synopsis),
   **Need stronger hook** (note) and **INT. HOUSE - DAY** (scene). Clicking an
   item scrolls the editor to that line.
 * Because more than one *kind* is present, small **filter chips**
-  (Sections / Scenes / Synopses / Notes) appear under the Outline header. Toggle
-  one **off** to hide that kind from the list; toggle it back **on** to restore
-  it. With a single kind present (e.g. only `#` headings) no chips show.
+  (Sections / Scenes / Synopses / Notes) appear. Toggle one **off** to hide that
+  kind from the list; toggle it back **on** to restore it. With a single kind
+  present (e.g. only `#` headings) no chips show.
+* This view is **read-only** — it reflects the document; it does not edit it.
+
+### Outline outliner test (manual story outliner)
+Switch the Outline header back to **Outline** (the default manual view). This is
+a Dynalist-style, editable, persisted story outliner. The keyboard model below
+is only active **while a row's title is focused**, so it never interferes with
+the editor.
+
+1. Click **+ Add**. A root row appears with its title focused for inline editing.
+2. Type `Act One` — the title updates as you type (no separate "edit" step).
+3. Press **Enter** → a new **sibling** row appears below, focused. Type `Act Two`.
+4. Select `Act One` (click it) and press **Ctrl/Cmd+Enter** → a **child** row is
+   added under it and focused. Type `Sequence One`.
+5. With `Sequence One` focused, press **Enter**, type `Sequence Two`.
+6. Press **Tab** on `Sequence Two` → it **indents** (nests under `Sequence One`).
+7. Press **Shift+Tab** → it **outdents** back to a child of `Act One`.
+8. Press **Ctrl/Cmd+↓** → the item **moves down** among its siblings;
+   **Ctrl/Cmd+↑** moves it back up.
+9. Press **↑ / ↓** (no modifier) → the **selection** moves between visible rows
+   (the focused title follows).
+10. On a row with children, press **←** at the start of the title → it
+    **collapses** (disclosure ▸); press **→** at the end → it **expands** (▾).
+    With it expanded, **→** again moves to the **first child**; **←** on a
+    childless/already-collapsed row selects its **parent**.
+11. Click the disclosure triangle (▸ / ▾) → it toggles collapse with the mouse.
+12. Press **Shift+Enter** (or open the row's **⋯ → Details…**) → a details panel
+    opens with a **Type** dropdown and a **Notes** textarea.
+13. Change **Type** to a different value (e.g. `Scene`) → the subtle type label on
+    the row updates. Type into **Notes**, then click **Done**.
+14. Clear a row's title entirely and press **Backspace** on the empty title → the
+    row is **deleted** (selection moves to a neighbour).
+15. Use **⋯ → Delete** on a row **with children** → a confirm dialog appears;
+    confirm → the row and its whole subtree are removed.
+16. Click **Collapse all** → every parent collapses; **Expand all** → all expand.
+17. ✅ A subtle **Saved** indicator appears after edits (top-right of the
+    Outline toolbar).
+18. **Persistence:** make a few edits, wait for **Saved**, then fully quit and
+    relaunch (or restart the backend and reload). ✅ The outline is **restored**
+    exactly — it lives at `<data_dir>/outline.json` (default `~/.logosforge`).
+19. ✅ While editing outline titles, the editor's own shortcuts are unaffected,
+    and outline keys (Enter/Tab/arrows) do **not** leak into the editor.
+20. ✅ The outline stays on the **left side**; it is not a Pro dockable panel and
+    there is no graph/timeline/dashboard.
+21. Switch to **From Document** and back to **Outline** → your manual items are
+    still there (the two views are independent).
+22. ✅ The chosen view (Outline / From Document) is remembered across restarts.
+
+### Outline hide test
+1. With items in the manual outline, press **Ctrl/Cmd+Shift+O** (or click `☰`).
+2. ✅ The whole Outline panel disappears (no leftover rail) and the editor widens.
+3. Press **Ctrl/Cmd+Shift+O** again (or `☰`) → ✅ the panel and your outline
+   return unchanged. **Esc** also restores it after Focus Mode / panel hiding.
+
+### Outline mode-defaults test
+The **type** of a freshly added item follows the current **Writing Mode**
+(Part 8). Add a **root** and its first **child** in each mode:
+* **Screenplay** → root **Act**; child of Act **Sequence**; child of Sequence
+  **Scene**; child of Scene **Beat**.
+* **Novel / Series** → root **Chapter** (Series root **Part**); child **Scene**;
+  child of Scene **Beat**.
+* ✅ You can always override any item's type via **Details…** — the defaults are
+  just sensible starting points; nesting itself is free.
 
 ### Section indent / outdent test
 Put the caret on the `# Act One` line, then:
@@ -441,6 +514,12 @@ breaks (element spacing, MORE/CONT'D, dialogue splits) are a later task.
 * **File** (native menu accelerators): **Cmd/Ctrl+N** New, **Cmd/Ctrl+O** Open,
   **Cmd/Ctrl+S** Save, **Cmd/Ctrl+Shift+S** Save As. `Cmd/Ctrl+K` is never bound
   in the menu — it stays Logos.
+* **Outline outliner** (only while a manual-outline row's title is focused, so it
+  never collides with the editor): **Enter** new sibling, **Shift+Enter** edit
+  details/notes, **Tab/Shift+Tab** indent/outdent, **Ctrl/Cmd+Enter** add child,
+  **↑/↓** move selection, **Ctrl/Cmd+↑/↓** move the item, **←** collapse-or-parent
+  (at caret start), **→** expand-or-first-child (at caret end), **Backspace** on an
+  empty title deletes (confirm if it has children), **Esc** deselects.
 
 ### Nerd Mode test
 Nerd Mode aids are **off by default** — the page stays clean until you opt in via
@@ -656,6 +735,13 @@ The **Nerd Mode editor tools** have their own pure suite
 syntax classification (screenplay + novel/notes categories, inline tokens) and
 syntax-theme switching.
 
+The **manual story outliner** model (`renderer/src/features/outline/outlineModel.ts`)
+is also pure and unit-tested (`npm run test:outline`): mode-aware default types
+(root + child chains per writing mode), tree queries (children / descendants /
+visible-row depth + collapse skipping / prev-next-first navigation), and every
+mutation (add root/child/sibling, rename, set type/notes, collapse + collapse-all,
+delete-subtree, indent/outdent, move up/down) with sibling-order re-indexing.
+
 ---
 
 ## Known limitations
@@ -701,6 +787,16 @@ syntax-theme switching.
   visibility persist in localStorage; **Focus Mode always starts off** on a fresh
   launch (so you never boot into a chrome-less window by surprise) and exits on
   **Esc**.
+- **The manual Outline outliner is foundational.** It persists as one
+  document-level JSON list at `<data_dir>/outline.json` (separate from the
+  document-derived navigator), survives restarts, and is intentionally
+  left-side + lightweight (no Pro dockable panel). Current TODOs: **drag-and-drop**
+  reordering (move up/down + indent/outdent ship today), deeper **two-way sync to
+  text ranges** (`linkedLineId` is reserved on each node but not yet wired), and
+  saving the outline **inside `.logosforge` project files** (plain-text
+  `.fountain`/`.txt`/`.md` saves deliberately carry **text only** — the outline is
+  never injected as hidden metadata, so those files are not corrupted). The chosen
+  view (Outline / From Document) persists in localStorage.
 - **Packaging is shell-only.** `npm run pack` packages the Electron shell; the
   Python backend is not yet bundled (dev launches it from `backend/`).
 

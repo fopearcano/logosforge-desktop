@@ -1,12 +1,30 @@
-/** The hideable Outline left-panel — presentational; items derived upstream. */
+/**
+ * The hideable Outline left-panel.
+ *
+ * Two views, toggled by a small segmented control (choice persisted locally):
+ *   - "Outline" (default): the manual, editable, persisted story outliner.
+ *   - "From Document": the read-only navigator derived from the current document
+ *     (headings / scene-headings / synopses / notes) — click to scroll there.
+ *
+ * The panel stays exactly where it is (left side, lightweight, Whiteboard Free).
+ */
 
 import { useMemo, useState } from 'react';
 
+import { OutlineOutliner } from './OutlineOutliner';
 import type { OutlineItem, OutlineKind } from './types';
+import { useOutline } from './useOutline';
 
-interface Props {
-  items: OutlineItem[];
-  onNavigate?: (item: OutlineItem) => void;
+type View = 'manual' | 'document';
+
+const VIEW_KEY = 'lf-outline-view';
+
+function loadView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'document' ? 'document' : 'manual';
+  } catch {
+    return 'manual';
+  }
 }
 
 const KIND_ORDER: OutlineKind[] = ['section', 'scene', 'synopsis', 'note'];
@@ -17,14 +35,120 @@ const KIND_LABELS: Record<OutlineKind, string> = {
   note: 'Notes',
 };
 
-function indent(item: OutlineItem): number {
+function derivedIndent(item: OutlineItem): number {
   if (item.kind === 'section') return 10 + Math.max(0, item.level - 1) * 14;
   return 24; // scenes / synopses / notes sit nested under sections
 }
 
-export function OutlinePanel({ items, onNavigate }: Props) {
-  // Which kinds are hidden (minimal show/hide filters, only shown when the
-  // document actually contains more than one kind of structure).
+interface Props {
+  derivedItems: OutlineItem[];
+  onNavigate?: (item: OutlineItem) => void;
+  baseUrl: string;
+  ready: boolean;
+  mode: string;
+}
+
+const SAVE_LABEL: Record<string, string> = {
+  saving: 'Saving…',
+  saved: 'Saved',
+  error: 'Save failed',
+};
+
+export function OutlinePanel({ derivedItems, onNavigate, baseUrl, ready, mode }: Props) {
+  const [view, setView] = useState<View>(loadView);
+  const store = useOutline({ baseUrl, ready, mode });
+
+  const selectView = (next: View) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      /* ignore storage failures */
+    }
+  };
+
+  return (
+    <aside className="outline-panel" aria-label="Outline">
+      <div className="outline-header">
+        <span className="outline-title-label">Outline</span>
+        <div className="outline-view-toggle" role="group" aria-label="Outline view">
+          <button
+            type="button"
+            className={`outline-view${view === 'manual' ? ' is-active' : ''}`}
+            aria-pressed={view === 'manual'}
+            onClick={() => selectView('manual')}
+          >
+            Outline
+          </button>
+          <button
+            type="button"
+            className={`outline-view${view === 'document' ? ' is-active' : ''}`}
+            aria-pressed={view === 'document'}
+            onClick={() => selectView('document')}
+            title="Navigator derived from the current document"
+          >
+            From Document
+          </button>
+        </div>
+      </div>
+
+      {view === 'manual' ? (
+        <ManualView store={store} />
+      ) : (
+        <DerivedView items={derivedItems} onNavigate={onNavigate} />
+      )}
+    </aside>
+  );
+}
+
+function ManualView({ store }: { store: ReturnType<typeof useOutline> }) {
+  const saveLabel = SAVE_LABEL[store.saveState] ?? '';
+  return (
+    <>
+      <div className="outline-toolbar">
+        <button type="button" className="outline-tool" onClick={store.addRoot}>
+          + Add
+        </button>
+        <button
+          type="button"
+          className="outline-tool"
+          onClick={store.collapseAll}
+          title="Collapse all"
+        >
+          Collapse all
+        </button>
+        <button
+          type="button"
+          className="outline-tool"
+          onClick={store.expandAll}
+          title="Expand all"
+        >
+          Expand all
+        </button>
+        <span className={`outline-save outline-save-${store.saveState}`} aria-live="polite">
+          {saveLabel}
+        </span>
+      </div>
+      <div className="outline-body">
+        {store.loading ? (
+          <p className="outline-hint">Loading…</p>
+        ) : store.error ? (
+          <p className="outline-hint outline-error">Couldn’t load outline: {store.error}</p>
+        ) : (
+          <OutlineOutliner store={store} />
+        )}
+      </div>
+    </>
+  );
+}
+
+function DerivedView({
+  items,
+  onNavigate,
+}: {
+  items: OutlineItem[];
+  onNavigate?: (item: OutlineItem) => void;
+}) {
   const [hidden, setHidden] = useState<Set<OutlineKind>>(() => new Set());
 
   const kinds = useMemo(() => {
@@ -43,8 +167,7 @@ export function OutlinePanel({ items, onNavigate }: Props) {
     });
 
   return (
-    <aside className="outline-panel" aria-label="Outline">
-      <div className="outline-header">Outline</div>
+    <>
       {kinds.length > 1 && (
         <div className="outline-filters" role="group" aria-label="Filter outline">
           {kinds.map((k) => (
@@ -62,7 +185,9 @@ export function OutlinePanel({ items, onNavigate }: Props) {
       )}
       <div className="outline-body">
         {visible.length === 0 ? (
-          <p className="outline-hint">{items.length === 0 ? 'No structure yet.' : 'All hidden.'}</p>
+          <p className="outline-hint">
+            {items.length === 0 ? 'No structure in the document yet.' : 'All hidden.'}
+          </p>
         ) : (
           <ul className="outline-list">
             {visible.map((item) => (
@@ -70,7 +195,7 @@ export function OutlinePanel({ items, onNavigate }: Props) {
                 <button
                   type="button"
                   className={`outline-item outline-${item.kind}`}
-                  style={{ paddingLeft: indent(item) }}
+                  style={{ paddingLeft: derivedIndent(item) }}
                   onClick={() => onNavigate?.(item)}
                   title={item.label}
                 >
@@ -81,6 +206,6 @@ export function OutlinePanel({ items, onNavigate }: Props) {
           </ul>
         )}
       </div>
-    </aside>
+    </>
   );
 }

@@ -33,6 +33,9 @@ export function App() {
   });
   const [focusHint, setFocusHint] = useState(false);
   const [outlineItems, setOutlineItems] = useState<OutlineItem[]>([]);
+  // The writing mode is owned by the document (WhiteboardPage); lift it here so
+  // the Outline panel can apply mode-aware defaults to the manual outliner.
+  const [docMode, setDocMode] = useState('novel');
   const [psykeOpen, setPsykeOpen] = useState(false);
   const [psykeQuery, setPsykeQuery] = useState('');
 
@@ -216,9 +219,20 @@ export function App() {
       </header>
       <div className="workarea">
         {ui.outlineVisible && (
-          <OutlinePanel items={outlineItems} onNavigate={(item) => scrollToBlock(item.blockIndex)} />
+          <OutlinePanel
+            derivedItems={outlineItems}
+            onNavigate={(item) => scrollToBlock(item.blockIndex)}
+            baseUrl={baseUrl}
+            ready={ready}
+            mode={docMode}
+          />
         )}
-        <WhiteboardPage baseUrl={baseUrl} ready={ready} onOutlineChange={setOutlineItems} />
+        <WhiteboardPage
+          baseUrl={baseUrl}
+          ready={ready}
+          onOutlineChange={setOutlineItems}
+          onModeChange={setDocMode}
+        />
       </div>
       {psykeOpen && (
         <PsykeWindow baseUrl={baseUrl} initialQuery={psykeQuery} onClose={() => setPsykeOpen(false)} />

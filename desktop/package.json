@@ -15,11 +15,12 @@
     "preview": "npm run build && electron . --prod",
     "typecheck": "tsc -p tsconfig.electron.json --noEmit && tsc -p renderer/tsconfig.json --noEmit",
     "pack": "npm run build && electron-builder --dir",
-    "test": "npm run typecheck && npm run test:screenplay && npm run test:editor-tools && npm run test:files && npm run test:themes",
+    "test": "npm run typecheck && npm run test:screenplay && npm run test:editor-tools && npm run test:files && npm run test:themes && npm run test:outline",
     "test:screenplay": "esbuild renderer/src/features/screenplay/screenplayTests.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/screenplay-test.mjs && node dist/screenplay-test.mjs",
     "test:editor-tools": "esbuild renderer/src/features/editorTools/editorToolsTests.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/editor-tools-test.mjs && node dist/editor-tools-test.mjs",
     "test:files": "esbuild renderer/src/features/files/filesTests.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/files-test.mjs && node dist/files-test.mjs",
     "test:themes": "esbuild renderer/src/styles/themes/themesTests.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/themes-test.mjs && node dist/themes-test.mjs",
+    "test:outline": "esbuild renderer/src/features/outline/outlineTests.ts --bundle --format=esm --platform=node --log-level=error --outfile=dist/outline-test.mjs && node dist/outline-test.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
