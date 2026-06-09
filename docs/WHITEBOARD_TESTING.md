@@ -4,8 +4,11 @@ How to run and test the current **LogosForge Whiteboard Free** phase locally —
 the FastAPI backend, the backend test suite, and the Electron desktop app — plus
 a manual checklist and troubleshooting.
 
-> This phase is a working foundation. AI (Logos) is still an **offline
-> placeholder**. PSYKE Small now supports search + creating/persisting elements
+> This phase is a working foundation. The Whiteboard Small AI system is
+> **LittleBoy** — two lightweight agents: **Billy** (a hovering chat box,
+> Cmd/Ctrl+Shift+B) and **Logos** (an inline/contextual box, Cmd/Ctrl+Shift+L).
+> Both return **offline placeholders** until an AI provider is configured (the
+> API + UI are stable for that). PSYKE Small now supports search + creating/persisting elements
 > (story-bible entries) locally. The left **Outline** panel now has a manual,
 > editable, persisted **story outliner** (Dynalist-style) alongside the existing
 > read-only **From Document** navigator. File management now includes an
@@ -151,8 +154,10 @@ compat fields), `/api/version`, `/api/whiteboard` (GET + PUT),
 `/api/writing-modes`, `/api/outline` (document-derived), `/api/outline/items`
 (the manual story outliner — GET + PUT, with a persistence-across-restart test),
 `/api/psyke/search`, `/api/psyke/elements` (create + persistence),
-`/api/logos/inline`, and the `/ws/events` WebSocket. `tests/test_smoke.py` is a
-single end-to-end "is the whole API alive?" check.
+`/api/logos/inline` (legacy), `/api/littleboy/billy/chat` and
+`/api/littleboy/logos/inline` (the LittleBoy agents), and the `/ws/events`
+WebSocket. `tests/test_smoke.py` is a single end-to-end "is the whole API alive?"
+check.
 
 ### Frontend (type safety + pure engine tests)
 
@@ -161,13 +166,14 @@ engine and the Nerd Mode editor tools are pure and unit-tested:
 
 ```bash
 cd desktop
-npm test                 # typecheck + screenplay + editor-tools + files + themes + outline + import-export
+npm test                 # typecheck + screenplay + editor-tools + files + themes + outline + import-export + littleboy
 npm run test:screenplay  # just the Fountain parser/classifier tests
 npm run test:editor-tools # line numbers, folding, syntax classify
 npm run test:files       # file <-> text serialization round-trips
 npm run test:themes      # theme palettes + readability invariant + custom derive
 npm run test:outline     # manual story-outliner model (tree ops, mode defaults)
 npm run test:import-export # import parsers + export builders + LogosForge round-trip
+npm run test:littleboy   # LittleBoy context bounding + Logos actions + apply-mode
 npm run build            # verify the renderer bundles and electron compiles
 ```
 
@@ -204,7 +210,11 @@ backend isn't running it tells you how to start it.
       /api/outline/items` with `{ "items": [...] }` saves and returns it (the
       manual story outliner; persists to `<data_dir>/outline.json`)
 - [ ] `GET /api/psyke/search?q=test` returns a `results` array
-- [ ] `POST /api/logos/inline` returns `{ ok, output, provider, ... }`
+- [ ] `POST /api/logos/inline` returns `{ ok, output, provider, ... }` (legacy)
+- [ ] `POST /api/littleboy/billy/chat` returns `{ ok, conversation_id, message }`
+      (placeholder when no provider is configured)
+- [ ] `POST /api/littleboy/logos/inline` returns `{ ok, result, suggested_replacement }`
+      (a transform action + selection yields a `suggested_replacement`)
 
 (`npm run smoke` checks all of the above automatically.)
 
@@ -226,7 +236,10 @@ backend isn't running it tells you how to start it.
       the surface monospaced
 - [ ] **PSYKE** opens via the `PSYKE` button or **Ctrl/Cmd+Shift+P**; searching
       `hero` or `city` returns results; clicking one shows a detail view; **Esc** closes
-- [ ] **Logos** opens with **Ctrl/Cmd+K** as a floating box at the cursor; with
+- [ ] **Billy** (LittleBoy chat) opens with **Ctrl/Cmd+Shift+B** as a draggable
+      floating box; messages get a response/placeholder; it is closable and its
+      conversation survives close/reopen within the session
+- [ ] **Logos** opens with **Ctrl/Cmd+Shift+L** (legacy alias **Ctrl/Cmd+K**) as a floating box at the cursor; with
       text selected, **Connect** lists related PSYKE entries; **Replace/Insert**
       applies into the document; **Esc** closes
 - [ ] **File → Import** loads Text/Markdown/Fountain (Replace or Append) and
@@ -510,7 +523,11 @@ breaks (element spacing, MORE/CONT'D, dialogue splits) are a later task.
    behave like freeform prose, not screenplay.)
 
 ### Keyboard test
-* **Ctrl/Cmd+K** opens Logos (it is *not* repurposed for cycling/uppercase).
+* **Ctrl/Cmd+Shift+B** opens/closes **Billy** (LittleBoy chat).
+* **Ctrl/Cmd+Shift+L** opens/closes **Logos** (inline); **Ctrl/Cmd+K** is a kept
+  legacy alias for Logos (it is *not* repurposed for cycling/uppercase). These
+  are handled in the capture phase so they beat the editor keymap; **Esc** closes
+  the active AI box first.
 * **Tab** on an empty Screenplay line opens the autocomplete popup; **Tab** on a
   Section line deepens it; **Shift+Tab** on a Section reduces its depth (and at
   level 1 turns it back into a normal line). Tab never moves focus out of the editor.
@@ -526,9 +543,10 @@ breaks (element spacing, MORE/CONT'D, dialogue splits) are a later task.
 * **Capitalization** (lowercase → UPPERCASE → Sentence case) is in the
   **Format ▾** toolbar menu — no shortcut, so **Cmd/Ctrl+K** stays Logos.
 * **Nerd Mode** toggles (all modes): **Cmd/Ctrl+L** line numbers,
-  **Cmd/Ctrl+Shift+F** folding, **Cmd/Ctrl+Shift+H** syntax highlighting. These
-  were free (no conflict with Logos `Cmd/Ctrl+K`, the outline/PSYKE `Shift+O/P`,
-  or Preview `Shift+E`).
+  **Cmd/Ctrl+Shift+F** folding, **Cmd/Ctrl+Shift+H** syntax highlighting. Note
+  **Cmd/Ctrl+L** (line numbers) is distinct from **Cmd/Ctrl+Shift+L** (Logos).
+  No conflict with Billy/Logos `Shift+B`/`Shift+L`, the outline/PSYKE `Shift+O/P`,
+  or Preview `Shift+E`.
 * **Distraction-free**: **Cmd/Ctrl+Shift+T** hides/shows the top panel;
   **Cmd/Ctrl+Shift+D** toggles Focus Mode (`Shift+F` was already folding, so
   Focus Mode uses **Shift+D**); **Esc** exits Focus Mode.
@@ -590,7 +608,8 @@ the **Editor** button (right of the status line) or the shortcuts above.
    and out.
 9. Press **Escape**.
 10. ✅ All UI returns.
-11. ✅ While in Focus Mode, **Cmd/Ctrl+K** still opens the Logos assistant.
+11. ✅ While in Focus Mode, **Cmd/Ctrl+Shift+B** (Billy) and **Cmd/Ctrl+Shift+L**
+    (Logos) still open; **Esc** closes the active AI box first, then restores panels.
 
 ### ESC restore test
 1. Hide the top panel (**Cmd/Ctrl+Shift+T**).
@@ -664,6 +683,65 @@ the **Editor** button (right of the status line) or the shortcuts above.
 > a file save. The **file-state** label next to it is the truth about disk:
 > `Untitled`, `Untitled — Modified`, `name.fountain — Saved to file`, or
 > `name.fountain — Modified`. The window title shows `… *` while modified.
+
+## LittleBoy AI (Billy + Logos)
+
+LittleBoy is the Whiteboard **Small** AI system — two lightweight, writing-first
+agents. It is intentionally **not** the Pro system: no Counterpart, no Quantum,
+no multi-agent orchestration, no dockable panels. Both agents collect a *bounded*
+context (selection + current block + nearby text + writing mode + screenplay
+element + document title) and call the backend; with no provider configured they
+return clear placeholders (the API/UI are stable for wiring a provider later via
+`LITTLEBOY_PROVIDER` / `LITTLEBOY_BASE_URL` / `LITTLEBOY_MODEL`).
+
+### LittleBoy test (Billy)
+1. Launch the Whiteboard.
+2. Type a paragraph.
+3. Select a sentence.
+4. Press **Cmd/Ctrl+Shift+B**.
+5. ✅ Billy's floating chat opens (titled **Billy**, subtitle **LittleBoy Chat**),
+   hovering over the editor (not a side panel). It is draggable by its header.
+6. Type: `Help me improve this.` and press **Enter**.
+7. ✅ A response appears (or the placeholder *"Billy placeholder response. AI
+   provider not configured yet…"*). **Shift+Enter** inserts a newline instead of
+   sending.
+8. Click **×** (or press **Esc**) to close Billy.
+9. Press **Cmd/Ctrl+Shift+B** again.
+10. ✅ Billy reopens with the **same conversation** (session memory). **Clear**
+    empties it.
+
+### Logos test
+1. Select text in the editor.
+2. Press **Cmd/Ctrl+Shift+L** (or the legacy **Cmd/Ctrl+K**).
+3. ✅ Logos appears near the selection/cursor (compact, titled **Logos** with the
+   mode/element context, showing a preview of the selection).
+4. Click **Rewrite**.
+5. ✅ A result appears (placeholder until a provider is wired).
+6. Click **Apply (replace selection)** if shown.
+7. ✅ Only the selected text is replaced (transform actions return a
+   `suggested_replacement`; Apply is the explicit confirmation — nothing
+   auto-replaces).
+8. Press **Cmd/Ctrl+Z** → ✅ the editor undoes the replacement.
+9. Open Logos again with **no selection**.
+10. ✅ It uses the current paragraph/block as context; informational actions
+    (Explain / Summarize / Connect to PSYKE) offer **Insert below** / **Copy**
+    (no Apply, so arbitrary text is never overwritten). **Connect to PSYKE**
+    lists related story-bible entries.
+11. Press **Esc** (or **×**) to close Logos.
+
+### Focus Mode AI test
+1. Enter Focus Mode (**Cmd/Ctrl+Shift+D**).
+2. Press **Cmd/Ctrl+Shift+B** → ✅ Billy opens (shortcuts work in Focus Mode).
+3. Close Billy.
+4. Press **Cmd/Ctrl+Shift+L** → ✅ Logos opens.
+5. Press **Esc** → ✅ the active AI box closes **first** (panels are restored only
+   by a subsequent Esc — the AI box always takes ESC priority).
+
+> Both agents are theme-aware (they use the active Whiteboard theme tokens) and
+> hideable. Backend: `POST /api/littleboy/billy/chat`,
+> `POST /api/littleboy/logos/inline`. Logos actions: rewrite, expand, compress,
+> make_more_visual, improve_dialogue, improve_action, explain, summarize,
+> connect_to_psyke.
 
 ### Native menu test
 1. Launch Electron (`npm run dev`).

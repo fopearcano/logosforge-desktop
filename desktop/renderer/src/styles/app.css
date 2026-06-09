@@ -1968,6 +1968,202 @@ body {
   opacity: 0.5;
 }
 
+.logos-apply {
+  flex-wrap: wrap;
+}
+
+/* Logos context preview (the captured selection / current block). */
+.logos-context {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================ Billy (LittleBoy chat) ============================ */
+.billy-box {
+  position: fixed;
+  z-index: 32;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.38);
+  font-size: 13px;
+}
+
+.billy-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: move;
+  user-select: none;
+}
+
+.billy-titles {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.billy-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.billy-subtitle {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.billy-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.billy-head-btn {
+  padding: 2px 8px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.billy-head-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.billy-head-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.billy-empty {
+  flex: 1;
+  padding: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.billy-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.billy-msg {
+  max-width: 85%;
+  padding: 6px 9px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.billy-msg-user {
+  align-self: flex-end;
+  background: var(--selection);
+  color: var(--text);
+}
+
+.billy-msg-assistant {
+  align-self: flex-start;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.billy-msg.is-pending {
+  color: var(--muted);
+}
+
+.billy-msg.is-error {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.billy-input-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.billy-input {
+  flex: 1;
+  resize: none;
+  padding: 6px 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.billy-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.billy-send {
+  align-self: flex-end;
+  padding: 6px 12px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.billy-send:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.billy-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.billy-messages {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.billy-messages::-webkit-scrollbar {
+  width: 10px;
+}
+
+.billy-messages::-webkit-scrollbar-thumb {
+  background: var(--border);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
 /* ============================ Polish ============================ */
 ::selection {
   background: var(--selection);

@@ -129,12 +129,13 @@ export function App() {
       const a = actionsRef.current;
       if (e.key === 'Escape') {
         const ae = document.activeElement as HTMLElement | null;
-        // Let a focused transient (popover/menu/PSYKE/Logos/input) handle ESC first.
+        // Let a focused transient (popover/menu/PSYKE/LittleBoy/input) handle ESC
+        // first. LittleBoy (Billy/Logos) closes via its own capture-phase handler.
         if (
           ae &&
           (ae.closest('.wb-popover') ||
             ae.closest('.psyke-window') ||
-            ae.closest('.logos-box') ||
+            ae.closest('.littleboy-box') ||
             /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))
         ) {
           return;

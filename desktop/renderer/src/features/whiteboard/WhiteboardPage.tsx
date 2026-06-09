@@ -15,7 +15,7 @@ import { fileStateLabel, windowTitle } from '../files/fileState';
 import { EXPORT_FORMATS, IMPORT_FORMATS } from '../files/importExportFormats';
 import { useFileActions } from '../files/useFileActions';
 import { useImportExport } from '../files/useImportExport';
-import { LogosFloatingBox } from '../logos/LogosFloatingBox';
+import { LittleBoyProvider } from '../littleboy/LittleBoyProvider';
 import { PreviewView } from '../screenplay/PreviewView';
 import { toFountainBlocks } from '../screenplay/screenplayExport';
 import type { FountainType } from '../screenplay/fountainTypes';
@@ -379,7 +379,15 @@ export function WhiteboardPage({ baseUrl, ready, onOutlineChange, onModeChange }
           <p className="wb-hint wb-error">Couldn’t load document: {loadError}</p>
         ) : null}
       </div>
-      {editor && doc && <LogosFloatingBox editor={editor} mode={doc.mode} baseUrl={baseUrl} />}
+      {editor && doc && (
+        <LittleBoyProvider
+          editor={editor}
+          mode={doc.mode}
+          baseUrl={baseUrl}
+          documentTitle={fileDoc.fileName}
+          screenplayElement={element}
+        />
+      )}
 
       {importExport.feedback && (
         <div

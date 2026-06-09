@@ -52,7 +52,9 @@ Host/port/version can be overridden via env vars: `LOGOSFORGE_HOST`,
 | GET/PUT | `/api/outline/items` | The manual story outliner (persisted node list) |
 | GET  | `/api/psyke/search?q=` | PSYKE entry search (sample + user-created entries) |
 | POST | `/api/psyke/elements` | Create a PSYKE element (persisted) |
-| POST | `/api/logos/inline` | Inline assistant (stub: offline, deterministic) |
+| POST | `/api/logos/inline` | Inline assistant (legacy; offline, deterministic) |
+| POST | `/api/littleboy/billy/chat` | LittleBoy **Billy** chat (provider or placeholder) |
+| POST | `/api/littleboy/logos/inline` | LittleBoy **Logos** inline action (provider or placeholder) |
 | WS   | `/ws/events` | Live-events foundation (greets `connected`, echoes messages) |
 
 `/health` and `/api/version` report both the backend build (`version` /

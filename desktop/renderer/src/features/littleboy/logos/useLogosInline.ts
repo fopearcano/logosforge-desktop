@@ -1,13 +1,10 @@
-/**
- * Manages a single inline Logos request lifecycle (request/response today,
- * streaming-ready). Renders `output` reactively so a future streaming transport
- * can update it incrementally without UI changes.
- */
+/** Runs a single Logos inline request lifecycle (request/response). */
 
 import { useCallback, useRef, useState } from 'react';
 
-import { runLogosInline } from './logosApi';
-import type { LogosRequest, LogosStatus } from './types';
+import { logosInline } from '../littleboyApi';
+import type { LogosInlineRequest, LogosInlineResponse } from '../littleboyTypes';
+import type { LogosStatus } from './logosTypes';
 
 interface Options {
   baseUrl: string;
@@ -15,19 +12,15 @@ interface Options {
 
 interface Result {
   status: LogosStatus;
-  output: string;
-  note: string | null;
-  provider: string | null;
+  response: LogosInlineResponse | null;
   error: string | null;
-  run: (req: LogosRequest) => Promise<void>;
+  run: (req: LogosInlineRequest) => Promise<void>;
   reset: () => void;
 }
 
 export function useLogosInline({ baseUrl }: Options): Result {
   const [status, setStatus] = useState<LogosStatus>('idle');
-  const [output, setOutput] = useState('');
-  const [note, setNote] = useState<string | null>(null);
-  const [provider, setProvider] = useState<string | null>(null);
+  const [response, setResponse] = useState<LogosInlineResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -35,27 +28,22 @@ export function useLogosInline({ baseUrl }: Options): Result {
     controllerRef.current?.abort();
     controllerRef.current = null;
     setStatus('idle');
-    setOutput('');
-    setNote(null);
-    setProvider(null);
+    setResponse(null);
     setError(null);
   }, []);
 
   const run = useCallback(
-    async (req: LogosRequest) => {
+    async (req: LogosInlineRequest) => {
       controllerRef.current?.abort();
       const controller = new AbortController();
       controllerRef.current = controller;
       setStatus('loading');
-      setOutput('');
+      setResponse(null);
       setError(null);
-      setNote(null);
       try {
-        const res = await runLogosInline(baseUrl, req, controller.signal);
+        const res = await logosInline(baseUrl, req, controller.signal);
         if (controller.signal.aborted) return;
-        setOutput(res.output);
-        setNote(res.note ?? null);
-        setProvider(res.provider);
+        setResponse(res);
         setStatus('done');
       } catch (err: unknown) {
         if (controller.signal.aborted) return;
@@ -66,5 +54,5 @@ export function useLogosInline({ baseUrl }: Options): Result {
     [baseUrl],
   );
 
-  return { status, output, note, provider, error, run, reset };
+  return { status, response, error, run, reset };
 }

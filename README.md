@@ -24,8 +24,11 @@ inline Logos assistant — built as a local **FastAPI** backend behind an
   dirty flag). `.logosforge` is the self-contained JSON document format.
 - **PSYKE** — a simple floating story-bible search panel (search → list →
   detail), pre-filled from the editor selection.
-- **Logos** — an inline, Codex-style assistant in a floating box at the cursor
-  (Ctrl/Cmd+K) with quick actions; applies results into the document.
+- **LittleBoy AI (Small)** — two lightweight, writing-first agents: **Billy**, a
+  hovering chat box (Ctrl/Cmd+Shift+B), and **Logos**, an inline/contextual box
+  (Ctrl/Cmd+Shift+L; legacy alias Ctrl/Cmd+K) with quick actions that apply
+  scoped replacements only on confirmation. Offline placeholders until an AI
+  provider is configured. No Counterpart/Quantum/Pro workspace.
 - **Backend status** — live connection + API version in the status bar.
 
 Not included (by design): dashboard, project hub, timeline, graph, analytics,
@@ -78,7 +81,8 @@ sidecar are a later milestone.
 
 | Shortcut | Action |
 |---|---|
-| **Ctrl/Cmd + K** | Open the Logos inline assistant at the cursor |
+| **Ctrl/Cmd + Shift + B** | Open/close **Billy** (LittleBoy chat) |
+| **Ctrl/Cmd + Shift + L** | Open/close **Logos** (inline) — legacy alias **Ctrl/Cmd + K** |
 | **Ctrl/Cmd + Shift + O** | Toggle the Outline panel |
 | **Ctrl/Cmd + Shift + P** | Toggle the PSYKE panel |
 | **Esc** | Close the PSYKE panel / Logos box |
@@ -94,9 +98,12 @@ cd desktop && npm run typecheck                 # frontend type safety
 
 ## Known limitations
 
-- **AI is a placeholder.** Logos returns offline, deterministic per-action text
-  (no real model yet); PSYKE serves a few sample entries. Both have clean seams
-  for wiring a provider/persistent store later.
+- **AI is a placeholder.** The **LittleBoy** agents (Billy chat + Logos inline)
+  return offline, deterministic responses until a provider is configured via
+  `LITTLEBOY_PROVIDER` / `LITTLEBOY_BASE_URL` / `LITTLEBOY_MODEL` (LM Studio,
+  Ollama, OpenAI, OpenRouter). PSYKE serves sample + user-created entries. The
+  API and UI are stable across that switch. (Pro AI — Counterpart/Quantum — is
+  out of scope.)
 - **Persistence is a single JSON file** at `~/.logosforge/whiteboard.json`
   (override with `LOGOSFORGE_DATA_DIR`); it survives backend/Electron restarts.
   Multi-document / per-project storage is a follow-up.

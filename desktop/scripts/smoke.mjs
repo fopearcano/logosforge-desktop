@@ -70,6 +70,18 @@ async function main() {
 
     const logos = await json('POST', '/api/logos/inline', { action: 'suggest', selection: 'test' });
     record('POST /api/logos/inline', logos.ok === true && !!logos.output);
+
+    const billy = await json('POST', '/api/littleboy/billy/chat', {
+      message: 'Help me improve this.',
+      writing_mode: 'novel',
+    });
+    record('POST /api/littleboy/billy/chat', billy.ok === true && !!billy.message?.content && !!billy.conversation_id);
+
+    const lbLogos = await json('POST', '/api/littleboy/logos/inline', {
+      action: 'rewrite',
+      selected_text: 'the sea is big',
+    });
+    record('POST /api/littleboy/logos/inline', lbLogos.ok === true && !!lbLogos.result && !!lbLogos.suggested_replacement);
   } catch (err) {
     record('request', false, String(err && err.message ? err.message : err));
   }
