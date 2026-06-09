@@ -117,6 +117,7 @@ export function App() {
         const a = actionsRef.current;
         if (action === 'toggleTopPanel') a.toggleTopPanel();
         else if (action === 'toggleOutline') a.toggleOutline();
+        else if (action === 'togglePsyke') a.togglePsyke();
         else if (action === 'focusMode') a.toggleFocus();
         else if (action === 'toggleTheme') a.cycleTheme();
       }),

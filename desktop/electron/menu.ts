@@ -111,6 +111,12 @@ export function setAppMenu({ getWindow }: MenuDeps): void {
         click: () => viewAction('toggleOutline'),
       },
       {
+        label: 'Toggle PSYKE',
+        accelerator: 'CmdOrCtrl+Shift+P',
+        registerAccelerator: false,
+        click: () => viewAction('togglePsyke'),
+      },
+      {
         label: 'Focus Mode',
         accelerator: 'CmdOrCtrl+Shift+D',
         registerAccelerator: false,
