@@ -9,9 +9,11 @@ a manual checklist and troubleshooting.
 > Cmd/Ctrl+Shift+B) and **Logos** (an inline/contextual box, Cmd/Ctrl+Shift+L).
 > Both return **offline placeholders** until an AI provider is configured (the
 > API + UI are stable for that). PSYKE Small now supports search + creating/persisting elements
-> (story-bible entries) locally. The left **Outline** panel now has a manual,
-> editable, persisted **story outliner** (Dynalist-style) alongside the existing
-> read-only **From Document** navigator. File management now includes an
+> (story-bible entries) locally. The left **Outline** panel is a manual,
+> editable, persisted **story outliner** (Dynalist-style — nesting, zoom/hoist
+> with breadcrumbs, tags, status, color labels, checkboxes, LogosForge Notes and
+> search/filter) alongside the existing read-only **From Document** navigator.
+> File management now includes an
 > **Import / Export** system (Text / Markdown / Fountain / Final Draft import;
 > Text / Markdown / Fountain / LogosForge / JSON / HTML export). Everything stays
 > intentionally lightweight (no graph, no dockable Pro workspace). See
@@ -374,11 +376,69 @@ the editor.
     still there (the two views are independent).
 22. ✅ The chosen view (Outline / From Document) is remembered across restarts.
 
-### Outline hide test
-1. With items in the manual outline, press **Ctrl/Cmd+Shift+O** (or click `☰`).
-2. ✅ The whole Outline panel disappears (no leftover rail) and the editor widens.
-3. Press **Ctrl/Cmd+Shift+O** again (or `☰`) → ✅ the panel and your outline
-   return unchanged. **Esc** also restores it after Focus Mode / panel hiding.
+### Improved Outline test (Dynalist-style)
+The manual **Outline** is now a lightweight Dynalist-style story outliner with
+zoom, tags, status, color labels, checkboxes and search — all on the same
+left-side, hideable panel (no Pro workspace).
+
+1. Open the Whiteboard.
+2. Show the Outline panel (`☰` or **Ctrl/Cmd+Shift+O**); ensure the **Outline**
+   (manual) view is selected.
+3. Click **+ Add** and type `Act One`.
+4. Press **Enter** and add `Act Two`.
+5. Select `Act One`.
+6. Press **Ctrl/Cmd+Enter** and add `Sequence One`.
+7. With `Sequence One` selected, **Ctrl/Cmd+Enter** → add `Scene One`.
+8. Under `Scene One`, **Ctrl/Cmd+Enter** → add `Beat One`.
+9. Press **Tab** / **Shift+Tab** to indent / outdent a selected item.
+10. Press **Ctrl/Cmd+↑ / ↓** to move an item among its siblings.
+11. Collapse `Act One` (click ▾, or **←** at title start). **Alt/Option+click**
+    the triangle collapses the whole branch.
+12. Expand `Act One` (click ▸, or **→** at title end).
+13. **Zoom into `Act One`** — double-click its **type label**, use **⋯ → Zoom
+    into item**, or **Ctrl/Cmd+]**.
+14. ✅ A breadcrumb appears: `Outline › Act One`; only Act One's subtree shows.
+15. Zoom out via the **Outline** breadcrumb (or **Ctrl/Cmd+[**).
+16. Add a **Note** under `Scene One` (select Scene One, add a child, then in
+    **⋯ → Edit note…** set its **Type** to `Note`).
+17. In the details panel, edit the **Note** body.
+18. Add a tag: type `revision` in the **Tags** field (Enter) — or type `#revision`
+    in the title. A subtle `#revision` chip appears under the row.
+19. Set the Note's **Status** to `To do` (a tiny `To do` badge shows).
+20. Set its **Color** to **Purple** (a purple dot shows on the row).
+21. Type `revision` in the Outline **search** box.
+22. ✅ The Note appears (matches are shown with their ancestors); clear the
+    search to restore the full tree. The **⛃ Filter** menu also filters by
+    type / status / color.
+23. Restart the app (or restart the backend + reload).
+24. ✅ The whole outline persisted — hierarchy, order, collapse, **type, note
+    body, status, tags, color, checkbox** — from `<data_dir>/outline.json`.
+
+Also: tick a row's **checkbox** → the title shows as done (strikethrough);
+**⋯ → Duplicate** copies an item and its children; **⋯ → Delete** on a parent
+asks for confirmation.
+
+### LogosForge Note test
+A `Note` item is a **LogosForge Note** (short title + longer body), usable for
+story / scene / character / research / revision / structural notes & reminders.
+
+1. Add an item and set its **Type** to **Note** (**⋯ → Edit note…**).
+2. Title: `Fix protagonist motivation`.
+3. Note body: `Clarify why the character refuses the call.`
+4. Save (autosaves) and restart the app.
+5. ✅ The note **title and body persist**.
+6. Search `protagonist`.
+7. ✅ The note appears (search covers title, body and tags). Notes can be nested
+   under any Act / Chapter / Scene / Beat, or live at the top level.
+
+### Hide/Show preservation test
+1. With items in the outline (and optionally zoomed in), hide the Outline
+   (**Ctrl/Cmd+Shift+O** or `☰`).
+2. ✅ The whole panel disappears (no leftover rail) and the editor widens.
+3. Show the Outline again (**Ctrl/Cmd+Shift+O** or `☰`).
+4. ✅ All items, collapse state and the **zoom/breadcrumb** state return safely
+   (hide/show is unchanged from before — it never edits the outline). **Esc**
+   also restores it after Focus Mode / panel hiding.
 
 ### Outline mode-defaults test
 The **type** of a freshly added item follows the current **Writing Mode**
@@ -942,11 +1002,14 @@ syntax classification (screenplay + novel/notes categories, inline tokens) and
 syntax-theme switching.
 
 The **manual story outliner** model (`renderer/src/features/outline/outlineModel.ts`)
-is also pure and unit-tested (`npm run test:outline`): mode-aware default types
-(root + child chains per writing mode), tree queries (children / descendants /
-visible-row depth + collapse skipping / prev-next-first navigation), and every
-mutation (add root/child/sibling, rename, set type/notes, collapse + collapse-all,
-delete-subtree, indent/outdent, move up/down) with sibling-order re-indexing.
+is also pure and unit-tested (`npm run test:outline`, 82 checks): mode-aware
+default types (root + child chains per writing mode), tree queries (children /
+descendants / visible-row depth + collapse skipping / prev-next-first navigation),
+every mutation (add root/child/sibling, rename, set type/notes/status/color/tags,
+checkbox, collapse + collapse-all + recursive branch collapse, delete-subtree,
+indent/outdent, move up/down, duplicate-subtree) with sibling-order re-indexing,
+plus the Dynalist layer: tag parsing (`#tag` in titles), search/filter matching,
+ancestor breadcrumbs, and zoom/filter-aware `buildRows` (matches + ancestors).
 
 ---
 
@@ -993,16 +1056,19 @@ delete-subtree, indent/outdent, move up/down) with sibling-order re-indexing.
   visibility persist in localStorage; **Focus Mode always starts off** on a fresh
   launch (so you never boot into a chrome-less window by surprise) and exits on
   **Esc**.
-- **The manual Outline outliner is foundational.** It persists as one
-  document-level JSON list at `<data_dir>/outline.json` (separate from the
-  document-derived navigator), survives restarts, and is intentionally
-  left-side + lightweight (no Pro dockable panel). Current TODOs: **drag-and-drop**
-  reordering (move up/down + indent/outdent ship today), deeper **two-way sync to
-  text ranges** (`linkedLineId` is reserved on each node but not yet wired), and
-  saving the outline **inside `.logosforge` project files** (plain-text
-  `.fountain`/`.txt`/`.md` saves deliberately carry **text only** — the outline is
-  never injected as hidden metadata, so those files are not corrupted). The chosen
-  view (Outline / From Document) persists in localStorage.
+- **The manual Outline outliner is a lightweight, Dynalist-style story outliner.**
+  It persists as one document-level JSON list at `<data_dir>/outline.json`
+  (separate from the document-derived navigator), survives restarts, and is
+  intentionally left-side + lightweight (no Pro dockable panel). It supports
+  nesting, zoom/hoist with breadcrumbs, item types, status, color labels, tags,
+  checkboxes, LogosForge Notes (title + body), and search/filter. The full tree
+  **is included** in `.logosforge` export/import; plain-text `.fountain`/`.txt`/
+  `.md` saves deliberately carry **text only** (the outline is never injected as
+  hidden metadata). The chosen view + zoom state persist in localStorage. Current
+  TODOs: **drag-and-drop** reordering (move up/down + indent/outdent ship today),
+  **multi-select**, a dedicated **"export outline as Markdown"** command, and
+  deeper **two-way sync to text ranges** (`linkedLineId` / "Link to editor" are
+  reserved but not yet wired).
 - **Packaging is shell-only.** `npm run pack` packages the Electron shell; the
   Python backend is not yet bundled (dev launches it from `backend/`).
 

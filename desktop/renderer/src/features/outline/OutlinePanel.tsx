@@ -11,7 +11,20 @@
 
 import { useMemo, useState } from 'react';
 
+import { Popover } from '../../components/Popover';
 import { OutlineOutliner } from './OutlineOutliner';
+import {
+  COLOR_LABELS,
+  OUTLINE_COLORS,
+  OUTLINE_STATUSES,
+  OUTLINE_TYPES,
+  STATUS_LABELS,
+  TYPE_LABELS,
+  isFilterActive,
+  type OutlineColor,
+  type OutlineItemType,
+  type OutlineStatus,
+} from './outlineModel';
 import type { OutlineItem, OutlineKind } from './types';
 import { useOutline } from './useOutline';
 
@@ -103,32 +116,89 @@ export function OutlinePanel({ derivedItems, onNavigate, baseUrl, ready, mode }:
 
 function ManualView({ store }: { store: ReturnType<typeof useOutline> }) {
   const saveLabel = SAVE_LABEL[store.saveState] ?? '';
+  // When zoomed in, "+ Add" adds a child of the zoom root (not a new top-level).
+  const add = () => (store.zoomRootId ? store.addChild(store.zoomRootId) : store.addRoot());
+  const filterOn = isFilterActive(store.filter);
   return (
     <>
       <div className="outline-toolbar">
-        <button type="button" className="outline-tool" onClick={store.addRoot}>
+        <button type="button" className="outline-tool" onClick={add}>
           + Add
         </button>
-        <button
-          type="button"
-          className="outline-tool"
-          onClick={store.collapseAll}
-          title="Collapse all"
-        >
+        <button type="button" className="outline-tool" onClick={store.collapseAll} title="Collapse all">
           Collapse all
         </button>
-        <button
-          type="button"
-          className="outline-tool"
-          onClick={store.expandAll}
-          title="Expand all"
-        >
+        <button type="button" className="outline-tool" onClick={store.expandAll} title="Expand all">
           Expand all
         </button>
         <span className={`outline-save outline-save-${store.saveState}`} aria-live="polite">
           {saveLabel}
         </span>
       </div>
+
+      <div className="outline-searchbar">
+        <input
+          className="outline-search"
+          type="search"
+          placeholder="Search title, note, #tag…"
+          value={store.filter.query}
+          onChange={(e) => store.setFilter({ query: e.target.value })}
+        />
+        <Popover label="⛃" title="Filter" align="right">
+          {() => (
+            <div className="wb-menu outline-filter-menu">
+              <label className="outline-field">
+                <span>Type</span>
+                <select
+                  value={store.filter.type}
+                  onChange={(e) => store.setFilter({ type: e.target.value as OutlineItemType | 'all' })}
+                >
+                  <option value="all">Any type</option>
+                  {OUTLINE_TYPES.map((t) => (
+                    <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="outline-field">
+                <span>Status</span>
+                <select
+                  value={store.filter.status}
+                  onChange={(e) => store.setFilter({ status: e.target.value as OutlineStatus | 'all' })}
+                >
+                  <option value="all">Any status</option>
+                  {OUTLINE_STATUSES.filter((s) => s !== 'none').map((s) => (
+                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="outline-field">
+                <span>Color</span>
+                <select
+                  value={store.filter.color}
+                  onChange={(e) => store.setFilter({ color: e.target.value as OutlineColor | 'all' })}
+                >
+                  <option value="all">Any color</option>
+                  {OUTLINE_COLORS.filter((c) => c !== 'none').map((c) => (
+                    <option key={c} value={c}>{COLOR_LABELS[c]}</option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" className="wb-menu-item" onClick={store.clearFilter}>
+                Clear filters
+              </button>
+            </div>
+          )}
+        </Popover>
+      </div>
+      {filterOn && (
+        <div className="outline-filter-active">
+          Filtered{store.filter.tag ? ` · #${store.filter.tag}` : ''}
+          <button type="button" className="outline-inline-link" onClick={store.clearFilter}>
+            Clear
+          </button>
+        </div>
+      )}
+
       <div className="outline-body">
         {store.loading ? (
           <p className="outline-hint">Loading…</p>

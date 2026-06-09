@@ -8,7 +8,15 @@
  * normalize loaded rows defensively to tolerate partial/legacy data.
  */
 
-import { OUTLINE_TYPES, type OutlineItemType, type OutlineNode } from './outlineModel';
+import {
+  OUTLINE_COLORS,
+  OUTLINE_STATUSES,
+  OUTLINE_TYPES,
+  type OutlineColor,
+  type OutlineItemType,
+  type OutlineNode,
+  type OutlineStatus,
+} from './outlineModel';
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8777';
 
@@ -25,6 +33,15 @@ function normalize(raw: unknown): OutlineNode | null {
   const type = typeof r.type === 'string' && (OUTLINE_TYPES as string[]).includes(r.type)
     ? (r.type as OutlineItemType)
     : 'custom';
+  const status = typeof r.status === 'string' && (OUTLINE_STATUSES as string[]).includes(r.status)
+    ? (r.status as OutlineStatus)
+    : 'none';
+  const colorLabel = typeof r.colorLabel === 'string' && (OUTLINE_COLORS as string[]).includes(r.colorLabel)
+    ? (r.colorLabel as OutlineColor)
+    : 'none';
+  const tags = Array.isArray(r.tags)
+    ? r.tags.filter((t): t is string => typeof t === 'string')
+    : [];
   const now = new Date().toISOString();
   return {
     id: r.id,
@@ -34,6 +51,10 @@ function normalize(raw: unknown): OutlineNode | null {
     notes: asString(r.notes),
     order: typeof r.order === 'number' ? r.order : 0,
     collapsed: r.collapsed === true,
+    completed: r.completed === true,
+    status,
+    tags,
+    colorLabel,
     linkedLineId: typeof r.linkedLineId === 'string' ? r.linkedLineId : null,
     createdAt: asString(r.createdAt, now),
     updatedAt: asString(r.updatedAt, now),

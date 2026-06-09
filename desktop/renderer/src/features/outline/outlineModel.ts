@@ -34,8 +34,65 @@ export const TYPE_LABELS: Record<OutlineItemType, string> = {
   sequence: 'Sequence',
   scene: 'Scene',
   beat: 'Beat',
-  note: 'Note',
+  note: 'Note', // a LogosForge Note (title + body); maps to Notes later
   custom: 'Custom',
+};
+
+// --- status (story progress) ------------------------------------------------
+
+export type OutlineStatus = 'none' | 'todo' | 'drafting' | 'revised' | 'done';
+
+export const OUTLINE_STATUSES: OutlineStatus[] = ['none', 'todo', 'drafting', 'revised', 'done'];
+
+export const STATUS_LABELS: Record<OutlineStatus, string> = {
+  none: 'No status',
+  todo: 'To do',
+  drafting: 'Drafting',
+  revised: 'Revised',
+  done: 'Done',
+};
+
+/** Short badge text (kept tiny for the compact panel). */
+export const STATUS_BADGE: Record<OutlineStatus, string> = {
+  none: '',
+  todo: 'To do',
+  drafting: 'Draft',
+  revised: 'Rev',
+  done: 'Done',
+};
+
+// --- color labels (writing/planning aid; user assigns meaning) --------------
+
+export type OutlineColor =
+  | 'none'
+  | 'red'
+  | 'orange'
+  | 'yellow'
+  | 'green'
+  | 'blue'
+  | 'purple'
+  | 'gray';
+
+export const OUTLINE_COLORS: OutlineColor[] = [
+  'none',
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+  'gray',
+];
+
+export const COLOR_LABELS: Record<OutlineColor, string> = {
+  none: 'No color',
+  red: 'Red',
+  orange: 'Orange',
+  yellow: 'Yellow',
+  green: 'Green',
+  blue: 'Blue',
+  purple: 'Purple',
+  gray: 'Gray',
 };
 
 export interface OutlineNode {
@@ -43,9 +100,14 @@ export interface OutlineNode {
   parentId: string | null;
   type: OutlineItemType;
   title: string;
+  /** Longer body — for type 'note' this is the LogosForge Note content. */
   notes: string;
   order: number;
   collapsed: boolean;
+  completed: boolean;
+  status: OutlineStatus;
+  tags: string[];
+  colorLabel: OutlineColor;
   linkedLineId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -65,6 +127,10 @@ export function createNode(
     notes: '',
     order: 0,
     collapsed: false,
+    completed: false,
+    status: 'none',
+    tags: [],
+    colorLabel: 'none',
     linkedLineId: null,
     createdAt: now,
     updatedAt: now,
@@ -217,6 +283,12 @@ export function setAllCollapsed(items: OutlineNode[], collapsed: boolean): Outli
   return items.map((i) => (parents.has(i.id) ? { ...i, collapsed } : i));
 }
 
+/** Collapse/expand a node and all its descendant parents (Alt+click disclosure). */
+export function setBranchCollapsed(items: OutlineNode[], id: string, collapsed: boolean): OutlineNode[] {
+  const branch = new Set([id, ...descendantIds(items, id)]);
+  return items.map((i) => (branch.has(i.id) && hasChildren(items, i.id) ? { ...i, collapsed } : i));
+}
+
 export function removeItem(items: OutlineNode[], id: string): OutlineNode[] {
   const doomed = new Set([id, ...descendantIds(items, id)]);
   return reindex(items.filter((i) => !doomed.has(i.id)));
@@ -279,4 +351,167 @@ export function moveDown(items: OutlineNode[], id: string): OutlineNode[] {
       return i;
     }),
   );
+}
+
+// --- status / color / checkbox / tags --------------------------------------
+
+export function setStatus(items: OutlineNode[], id: string, status: OutlineStatus, now: string): OutlineNode[] {
+  return items.map((i) => (i.id === id ? { ...i, status, updatedAt: now } : i));
+}
+export function setColorLabel(items: OutlineNode[], id: string, colorLabel: OutlineColor, now: string): OutlineNode[] {
+  return items.map((i) => (i.id === id ? { ...i, colorLabel, updatedAt: now } : i));
+}
+export function setCompleted(items: OutlineNode[], id: string, completed: boolean, now: string): OutlineNode[] {
+  return items.map((i) => (i.id === id ? { ...i, completed, updatedAt: now } : i));
+}
+export function toggleCompleted(items: OutlineNode[], id: string, now: string): OutlineNode[] {
+  return items.map((i) => (i.id === id ? { ...i, completed: !i.completed, updatedAt: now } : i));
+}
+export function setTags(items: OutlineNode[], id: string, tags: string[], now: string): OutlineNode[] {
+  const clean = normalizeTags(tags);
+  return items.map((i) => (i.id === id ? { ...i, tags: clean, updatedAt: now } : i));
+}
+
+/** Lowercase, strip a leading '#', drop spaces/empties. */
+export function normalizeTag(raw: string): string {
+  return raw.replace(/^#+/, '').trim().toLowerCase().replace(/\s+/g, '-');
+}
+export function normalizeTags(tags: string[]): string[] {
+  const out: string[] = [];
+  for (const t of tags) {
+    const n = normalizeTag(t);
+    if (n && !out.includes(n)) out.push(n);
+  }
+  return out;
+}
+/** Hashtags typed inline in a title (the "#tag in title" affordance). */
+export function extractHashtags(text: string): string[] {
+  return normalizeTags((text.match(/#[\p{L}\p{N}_-]+/gu) ?? []).map((m) => m.slice(1)));
+}
+/** All tags for search/filter: structured tags + any #tags in the title. */
+export function nodeTags(node: OutlineNode): string[] {
+  return normalizeTags([...(node.tags ?? []), ...extractHashtags(node.title)]);
+}
+
+// --- duplicate (subtree, fresh ids) ----------------------------------------
+
+/**
+ * Clone the subtree rooted at `id`, using `idMap` (every subtree id → a fresh
+ * id). The clone is inserted right after the original (same parent); descendants
+ * keep their structure. Pure: the caller supplies the id map.
+ */
+export function cloneSubtreeWithMap(
+  items: OutlineNode[],
+  id: string,
+  idMap: Map<string, string>,
+  now: string,
+): OutlineNode[] {
+  const root = getNode(items, id);
+  if (!root) return items;
+  const subtree = [id, ...descendantIds(items, id)];
+  const clones = subtree.map((sid) => {
+    const n = getNode(items, sid) as OutlineNode;
+    const parentId = sid === id ? n.parentId : (idMap.get(n.parentId as string) as string);
+    return {
+      ...n,
+      id: idMap.get(sid) as string,
+      parentId,
+      order: sid === id ? root.order + 0.5 : n.order,
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
+  return reindex([...items, ...clones]);
+}
+
+// --- search / filter -------------------------------------------------------
+
+export interface OutlineFilter {
+  query: string;
+  type: OutlineItemType | 'all';
+  status: OutlineStatus | 'all';
+  color: OutlineColor | 'all';
+  tag: string | null;
+}
+
+export const EMPTY_FILTER: OutlineFilter = {
+  query: '',
+  type: 'all',
+  status: 'all',
+  color: 'all',
+  tag: null,
+};
+
+export function isFilterActive(f: OutlineFilter): boolean {
+  return !!f.query.trim() || f.type !== 'all' || f.status !== 'all' || f.color !== 'all' || !!f.tag;
+}
+
+export function matchesFilter(node: OutlineNode, f: OutlineFilter): boolean {
+  if (f.type !== 'all' && node.type !== f.type) return false;
+  if (f.status !== 'all' && node.status !== f.status) return false;
+  if (f.color !== 'all' && node.colorLabel !== f.color) return false;
+  const tags = nodeTags(node);
+  if (f.tag && !tags.includes(f.tag)) return false;
+  const q = f.query.trim().toLowerCase();
+  if (q) {
+    const hay = `${node.title}\n${node.notes}\n${tags.map((t) => '#' + t).join(' ')}`.toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+// --- zoom + view rows ------------------------------------------------------
+
+/** Root → … → node (used for breadcrumbs). */
+export function ancestorChain(items: OutlineNode[], id: string): OutlineNode[] {
+  const chain: OutlineNode[] = [];
+  let cur = getNode(items, id);
+  while (cur) {
+    chain.unshift(cur);
+    cur = cur.parentId ? getNode(items, cur.parentId) : undefined;
+  }
+  return chain;
+}
+
+/**
+ * Visible rows for the panel, honoring a zoom root and an active filter.
+ *  - zoom: rows start at the children of `zoomRootId` (the root itself is the
+ *    breadcrumb, not a row); `null` = whole outline.
+ *  - filter: only matching nodes + their ancestors are shown, and collapse is
+ *    ignored so matches are revealed.
+ */
+export function buildRows(
+  items: OutlineNode[],
+  zoomRootId: string | null,
+  filter: OutlineFilter,
+): VisibleRow[] {
+  const base = zoomRootId && getNode(items, zoomRootId) ? zoomRootId : null;
+  let includeIds: Set<string> | null = null;
+  if (isFilterActive(filter)) {
+    includeIds = new Set<string>();
+    const scope = base ? descendantIds(items, base) : items.map((i) => i.id);
+    for (const sid of scope) {
+      const n = getNode(items, sid) as OutlineNode;
+      if (matchesFilter(n, filter)) {
+        includeIds.add(sid);
+        let p = n.parentId;
+        while (p && p !== base) {
+          includeIds.add(p);
+          p = getNode(items, p)?.parentId ?? null;
+        }
+      }
+    }
+  }
+  const out: VisibleRow[] = [];
+  const walk = (parentId: string | null, depth: number) => {
+    for (const node of childrenOf(items, parentId)) {
+      if (includeIds && !includeIds.has(node.id)) continue;
+      const kids = hasChildren(items, node.id);
+      out.push({ node, depth, hasChildren: kids });
+      const expand = includeIds ? true : !node.collapsed;
+      if (kids && expand) walk(node.id, depth + 1);
+    }
+  };
+  walk(base, 0);
+  return out;
 }

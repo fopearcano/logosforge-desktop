@@ -16,8 +16,10 @@ inline Logos assistant — built as a local **FastAPI** backend behind an
 - **Writing Modes** — the five StoryPlanner modes (Novel, Screenplay, Graphic
   Novel, Stage Script, Series), selectable; the editor reacts (e.g. Screenplay/
   Stage use a monospaced surface).
-- **Outline** — a hideable left panel: a manual, persisted story outliner plus a
-  read-only navigator derived from document headings (click-to-scroll).
+- **Outline** — a hideable left panel: a manual, persisted, Dynalist-style story
+  outliner (nesting, zoom/hoist with breadcrumbs, tags, status, color labels,
+  checkboxes, LogosForge Notes, search/filter) plus a read-only navigator derived
+  from document headings (click-to-scroll).
 - **Import / Export** — File → Import (Text, Markdown, Fountain, Final Draft) and
   File → Export (Text, Markdown, Fountain, LogosForge, JSON, HTML). Import is
   Replace/Append and marks the doc modified; Export is a copy (never clears the

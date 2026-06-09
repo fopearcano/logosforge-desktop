@@ -4,10 +4,15 @@
  */
 
 import {
+  ancestorChain,
+  buildRows,
   childrenOf,
   childType,
+  cloneSubtreeWithMap,
   createNode,
   descendantIds,
+  EMPTY_FILTER,
+  extractHashtags,
   firstChildId,
   getNode,
   hasChildren,
@@ -15,18 +20,26 @@ import {
   insertChild,
   insertRoot,
   insertSibling,
+  matchesFilter,
   moveDown,
   moveUp,
   nextVisibleId,
+  nodeTags,
+  normalizeTag,
   outdentItem,
   prevVisibleId,
   removeItem,
   rename,
   rootType,
   setAllCollapsed,
+  setBranchCollapsed,
   setCollapsed,
+  setColorLabel,
   setNodeType,
   setNotes,
+  setStatus,
+  setTags,
+  toggleCompleted,
   toggleCollapsed,
   visibleRows,
   type OutlineItemType,
@@ -270,6 +283,122 @@ check('childType notes fallback', childType('notes', 'note') === 'note');
   rows = visibleRows(items);
   check('collapsed hides descendants', ids(rows.map((r) => r.node)) === ids([p, c1, c2]));
   check('nextVisibleId skips collapsed subtree', nextVisibleId(items, c1.id) === c2.id);
+}
+
+// 14. New fields default + setters (status / color / completed / tags)
+{
+  const c = createNode('x', 'note', null, NOW);
+  check('createNode new defaults', c.completed === false && c.status === 'none' && c.colorLabel === 'none' && c.tags.length === 0);
+  let items = insertRoot([], mk('scene'));
+  const id = items[0].id;
+  items = setStatus(items, id, 'drafting', NOW);
+  check('setStatus', getNode(items, id)?.status === 'drafting');
+  items = setColorLabel(items, id, 'purple', NOW);
+  check('setColorLabel', getNode(items, id)?.colorLabel === 'purple');
+  items = toggleCompleted(items, id, NOW);
+  check('toggleCompleted on', getNode(items, id)?.completed === true);
+  items = toggleCompleted(items, id, NOW);
+  check('toggleCompleted off', getNode(items, id)?.completed === false);
+  items = setTags(items, id, ['#Revision', 'revision', ' Theme '], NOW);
+  check('setTags normalizes + dedupes', JSON.stringify(getNode(items, id)?.tags) === JSON.stringify(['revision', 'theme']));
+}
+
+// 15. Tag helpers
+check('normalizeTag strips # + lowercases', normalizeTag('#Revision') === 'revision');
+check('normalizeTag spaces → dash', normalizeTag('To Do') === 'to-do');
+check('extractHashtags from title', JSON.stringify(extractHashtags('fix #motivation and #Arc')) === JSON.stringify(['motivation', 'arc']));
+{
+  const n = { ...createNode('x', 'note', null, NOW), title: 'beat #climax', tags: ['theme'] };
+  check('nodeTags merges title + structured', JSON.stringify(nodeTags(n).sort()) === JSON.stringify(['climax', 'theme']));
+}
+
+// 16. matchesFilter (query / type / status / color / tag)
+{
+  const n: OutlineNode = {
+    ...createNode('x', 'scene', null, NOW),
+    title: 'Opening on the beach',
+    notes: 'protagonist refuses the call',
+    status: 'todo',
+    colorLabel: 'blue',
+    tags: ['revision'],
+  };
+  check('match query title', matchesFilter(n, { ...EMPTY_FILTER, query: 'beach' }));
+  check('match query notes', matchesFilter(n, { ...EMPTY_FILTER, query: 'protagonist' }));
+  check('match query tag', matchesFilter(n, { ...EMPTY_FILTER, query: 'revision' }));
+  check('no match query', !matchesFilter(n, { ...EMPTY_FILTER, query: 'spaceship' }));
+  check('match type', matchesFilter(n, { ...EMPTY_FILTER, type: 'scene' }));
+  check('no match type', !matchesFilter(n, { ...EMPTY_FILTER, type: 'beat' }));
+  check('match status', matchesFilter(n, { ...EMPTY_FILTER, status: 'todo' }));
+  check('match color', matchesFilter(n, { ...EMPTY_FILTER, color: 'blue' }));
+  check('match tag', matchesFilter(n, { ...EMPTY_FILTER, tag: 'revision' }));
+  check('no match tag', !matchesFilter(n, { ...EMPTY_FILTER, tag: 'theme' }));
+}
+
+// 17. ancestorChain + buildRows (zoom)
+{
+  let items: OutlineNode[] = [];
+  const act = mk('act');
+  const seq = mk('sequence');
+  const sc = mk('scene');
+  const beat = mk('beat');
+  items = insertRoot(items, act);
+  items = insertChild(items, act.id, seq);
+  items = insertChild(items, seq.id, sc);
+  items = insertChild(items, sc.id, beat);
+  check('ancestorChain', ids(ancestorChain(items, sc.id)) === ids([act, seq, sc]));
+
+  // Zoom into seq → rows start at its children (scene, beat) with depth 0 at scene.
+  const zoomed = buildRows(items, seq.id, EMPTY_FILTER);
+  check('zoom rows start below zoom root', ids(zoomed.map((r) => r.node)) === ids([sc, beat]));
+  check('zoom depth resets', zoomed[0].depth === 0 && zoomed[1].depth === 1);
+  // No zoom → full tree.
+  check('no-zoom rows', buildRows(items, null, EMPTY_FILTER).length === 4);
+}
+
+// 18. buildRows (filter shows matches + ancestors, ignoring collapse)
+{
+  let items: OutlineNode[] = [];
+  const act = mk('act');
+  const seq = mk('sequence');
+  const sc = mk('scene');
+  items = insertRoot(items, act);
+  items = insertChild(items, act.id, seq);
+  items = insertChild(items, seq.id, sc);
+  items = setNotes(items, sc.id, 'the protagonist arrives', NOW);
+  items = setAllCollapsed(items, true); // everything collapsed
+  const rows = buildRows(items, null, { ...EMPTY_FILTER, query: 'protagonist' });
+  // The matching scene + its ancestors are revealed despite being collapsed.
+  check('filter reveals match + ancestors', ids(rows.map((r) => r.node)) === ids([act, seq, sc]));
+  check('filter excludes non-matches', buildRows(items, null, { ...EMPTY_FILTER, query: 'zzz' }).length === 0);
+}
+
+// 19. duplicate (cloneSubtreeWithMap) — fresh ids, includes children, after original
+{
+  let items: OutlineNode[] = [];
+  const act = mk('act');
+  const seq = mk('sequence');
+  items = insertRoot(items, act);
+  items = insertChild(items, act.id, seq);
+  const map = new Map([[act.id, 'dup-act'], [seq.id, 'dup-seq']]);
+  items = cloneSubtreeWithMap(items, act.id, map, NOW);
+  const roots = childrenOf(items, null);
+  check('duplicate adds a sibling after original', ids(roots) === ids([act, { id: 'dup-act' } as OutlineNode]));
+  check('duplicate clones children with new ids', getNode(items, 'dup-seq')?.parentId === 'dup-act');
+  check('duplicate keeps original intact', getNode(items, seq.id)?.parentId === act.id);
+}
+
+// 20. setBranchCollapsed (Alt+click recursive)
+{
+  let items: OutlineNode[] = [];
+  const act = mk('act');
+  const seq = mk('sequence');
+  const sc = mk('scene');
+  items = insertRoot(items, act);
+  items = insertChild(items, act.id, seq);
+  items = insertChild(items, seq.id, sc); // act>seq>sc (act + seq are parents)
+  items = setBranchCollapsed(items, act.id, true);
+  check('branch collapse sets parents', getNode(items, act.id)?.collapsed === true && getNode(items, seq.id)?.collapsed === true);
+  check('branch collapse skips leaves', getNode(items, sc.id)?.collapsed === false);
 }
 
 // --- report ---
