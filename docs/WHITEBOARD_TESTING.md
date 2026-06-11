@@ -57,6 +57,13 @@ a manual checklist and troubleshooting.
 > live-checked (health/version, whiteboard GET+PUT, writing-modes, outline +
 > items, PSYKE search + create, LittleBoy billy/logos, legacy logos, ws/events),
 > frontend typecheck + all suites + build green.
+>
+> **Current sync baseline: StoryPlanner `621212c`.** The only upstream change
+> after `439a68a` is a docs-only commit (the Alpha manual release-confirmation
+> checklist for that same `439a68a` code tree; version still `0.9.0-alpha`, no
+> tag, no code/dependency/API/mode/PSYKE/AI changes). Re-verified at this
+> baseline: backend suite green on Python 3.11 + a fresh 3.13 install, the full
+> live endpoint sweep above, and frontend typecheck + suites + build.
 
 ## Repository layout
 
