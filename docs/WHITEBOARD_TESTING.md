@@ -38,6 +38,25 @@ a manual checklist and troubleshooting.
 > were nudged where a compiled wheel requires it (`pydantic>=2.9` for 3.13).
 > No endpoints, schemas (beyond additive version fields), writing modes, or app
 > behaviour changed.
+>
+> **Latest core sync (StoryPlanner `439a68a`, 0.9.0-alpha RC).** Re-audited the
+> upstream after its Alpha-RC push. Upstream changes since the previous sync:
+> a new **voice/Whisper dictation** feature line ("Dexter's Room": local
+> `faster-whisper`/`sounddevice` deps, LAN Whisper companion), **multi-language**
+> AI prompt injection (`languages.py`; layered above the provider transport),
+> and an **internal** Graphic Novel restructure (Act → Page → Scene → Panel in
+> the editor/storage layer). None of these touch the contract surfaces this
+> backend mirrors: the upstream HTTP API layer, public writing-mode data
+> (Graphic Novel units remain *Chapters/Pages/Panels*), PSYKE logic, provider
+> transport, core version and Python requirement are all **unchanged** — so no
+> Whiteboard code changes were needed. The voice dependencies are deliberately
+> **not** adopted (the Whiteboard has no dictation feature; adding one would be
+> a new product feature, and `/api/littleboy/dictation/*` intentionally does
+> not exist — requests to it 404 cleanly). Verified after the re-audit: backend
+> suite green on Python 3.11 + 3.13 (fresh dependency install), every endpoint
+> live-checked (health/version, whiteboard GET+PUT, writing-modes, outline +
+> items, PSYKE search + create, LittleBoy billy/logos, legacy logos, ws/events),
+> frontend typecheck + all suites + build green.
 
 ## Repository layout
 
